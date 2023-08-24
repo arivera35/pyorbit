@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Satellite Tracker</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js"></script>
+<style>
+body { margin: 0; padding: 0; }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+</style>
+</head>
+<body>    
+<div id="map"></div>
+<div id="satellite-info">
+    <h2>Satellite Information</h2>
+    <p><strong>Name:</strong> <span id="name"></span></p>
+    <p><strong>NORAD ID:</strong> <span id="catalog_number"></span></p>
+    <p><strong>Latitude:</strong> <span id="lat"></span></p>
+    <p><strong>Longitude:</strong> <span id="lon"></span></p>
+    <p><strong>Azimuth:</strong> <span id="az"></span></p>
+    <p><strong>Elevation:</strong> <span id="el"></span></p>
+    <p><strong>Speed:</strong> <span id="speed"></span> km/s</p>
+  </div>
+
+  <div id="satellite-passes">
+    <h2>Future Passes</h2>
+    <p><strong>AOS:</strong> <span id="aos"></span></p>
+    <p><strong>LOS:</strong> <span id="los"></span></p>
+    <p><strong>Duration:</strong> <span id="duration"></span> minutes</p>
+  </div>
+
+<script>
+	mapboxgl.accessToken = 'pk.eyJ1IjoiYXJpdmVyYTM1IiwiYSI6ImNrbHVrenM2MDF6aXgybmx3bDN2ZjFtMm0ifQ.PnjnSxGKp1YMV7aik9cFjA';
+    const map = new mapboxgl.Map({
+        container: 'map',
+        // Choose from Mapbox's core styles, or make your own style with Mapbox Studio
+        style: 'mapbox://styles/mapbox/streets-v12',
+        zoom: 1.5
+    });
+
+    map.on('style.load', () => {
+    map.setFog({
+        color: 'rgb(186, 210, 235)', // Lower atmosphere
+        'high-color': 'rgb(36, 92, 223)', // Upper atmosphere
+        'horizon-blend': 0.002, // Atmosphere thickness (default 0.2 at low zooms)
+        'space-color': 'rgb(11, 11, 25)', // Background color
+        'star-intensity': 0.6 // Background star brightness (default 0.35 at low zoooms )
+    });
+});
+
+
+    map.on('load', async () => {
+        // Get the initial location of the International Space Station (ISS).
+        const geojson = await getLocation();
+        // Add the ISS location as a source.
+        map.addSource('iss', {
+            type: 'geojson',
+            data: geojson
+        });
+        // Add the rocket symbol layer to the map.
+        map.addLayer({
+            'id': 'iss',
+            'type': 'symbol',
+            'source': 'iss',
+            'layout': {
+                // This icon is a part of the Mapbox Streets style.
+                // To view all images available in a Mapbox style, open
+                // the style in Mapbox Studio and click the "Images" tab.
+                // To add a new image to the style at runtime see
+                // https://docs.mapbox.com/mapbox-gl-js/example/add-image/
+                'icon-image': 'rocket'
+            }
+        });
+        
+
+        // Update the source from the API every 2 seconds.
+        const updateSource = setInterval(async () => {
+            const geojson = await getLocation(updateSource);
+            map.getSource('iss').setData(geojson);
+        }, 2000);
+
+        
+
+        async function getLocation(updateSource) {
+    try {
+      const response = await fetch('http://127.0.0.1:5000/get_satellite_position', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          catalog_number: "25544"
+        })
+      });
+
+      if (response.status === 200) {
+        const { lat, lon, az, el, speed, name, catalog_number } = await response.json(); // Extract data
+        console.log(lat, lon);
+
+        // Update the content of the satellite-info box
+        document.getElementById('lat').textContent = lat.toFixed(4);
+        document.getElementById('lon').textContent = lon.toFixed(4);
+        document.getElementById('az').textContent = az.toFixed(2);
+        document.getElementById('el').textContent = el.toFixed(2);
+        document.getElementById('speed').textContent = speed.toFixed(4);
+        document.getElementById('catalog_number').textContent = catalog_number;
+        document.getElementById('name').textContent = name;
+
+        // Fly the map to the location using lat and lon
+        map.flyTo({
+          center: [lon, lat],
+          speed: 0.5
+        });
+
+        // Return the location of the ISS as GeoJSON.
+        return {
+          'type': 'FeatureCollection',
+          'features': [
+            {
+              'type': 'Feature',
+              'geometry': {
+                'type': 'Point',
+                'coordinates': [lon, lat]
+              }
+            }
+          ]
+        };
+      } else {
+        console.error('Request failed with status:', response.status);
+      }
+    } catch (err) {
+      // If the updateSource interval is defined, clear the interval to stop updating the source.
+      if (updateSource) clearInterval(updateSource);
+      throw new Error(err);
+    }
+  }
+});
+</script>
+<style>
+  #satellite-info {
+    position: absolute;
+    top: 20px; /* Adjust the top position as needed */
+    left: 20px; /* Adjust the left position as needed */
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+  }
+  #satellite-passes {
+    position: absolute;
+    top: 390px; /* Adjust the top position as needed */
+    left: 20px; /* Adjust the left position as needed */
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+  }
+</style>
+
+</body>
+</html>
