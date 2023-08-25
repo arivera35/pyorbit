@@ -11,17 +11,34 @@ body { margin: 0; padding: 0; }
 #map { position: absolute; top: 0; bottom: 0; width: 100%; }
 </style>
 </head>
-<body>    
+<body>  
+    
 <div id="map"></div>
+<div class="header">
+  <div class="container">
+    <h2 class="logo"><a href="#">Logo</a></h2>
+    <a id="menu-icon">&#9776;</a>
+    <nav class="navbar">
+      <ul class="menu">
+        <li><a class="active" href="#">Home</a></li>
+        <li><a href="#">About</a></li>
+        <li><a href="#">Blog</a></li>
+        <li><a href="#">Work</a></li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+    </nav>
+
+  </div>
+</div>
 <div id="satellite-info">
-    <h2>Satellite Information</h2>
-    <p><strong>Name:</strong> <span id="name"></span></p>
-    <p><strong>NORAD ID:</strong> <span id="catalog_number"></span></p>
-    <p><strong>Latitude:</strong> <span id="lat"></span></p>
-    <p><strong>Longitude:</strong> <span id="lon"></span></p>
-    <p><strong>Azimuth:</strong> <span id="az"></span></p>
-    <p><strong>Elevation:</strong> <span id="el"></span></p>
-    <p><strong>Speed:</strong> <span id="speed"></span> km/s</p>
+    <h2><strong><span id="name"></span></strong></h2>
+    <p><strong>Catalog Number:</strong> <span id="catalog_number"></span></p>
+    <p><strong>Latitude:</strong> <span id="lat"></span>°</p>
+    <p><strong>Longitude:</strong> <span id="lon"></span>°</p>
+    <p><strong>Azimuth:</strong> <span id="az"></span>°</p>
+    <p><strong>Elevation:</strong> <span id="el"></span>°</p>
+    <p><strong>Velocity:</strong> <span id="speed"></span> km/s</p>
+    <p><strong>Sunlit:</strong> <span id="sunlit"></span></p>
   </div>
 
   <div id="satellite-passes">
@@ -79,7 +96,7 @@ body { margin: 0; padding: 0; }
         const updateSource = setInterval(async () => {
             const geojson = await getLocation(updateSource);
             map.getSource('iss').setData(geojson);
-        }, 2000);
+        }, 1000);
 
         
 
@@ -96,7 +113,7 @@ body { margin: 0; padding: 0; }
       });
 
       if (response.status === 200) {
-        const { lat, lon, az, el, speed, name, catalog_number } = await response.json(); // Extract data
+        const { lat, lon, az, el, speed, name, catalog_number, sunlit } = await response.json(); // Extract data
         console.log(lat, lon);
 
         // Update the content of the satellite-info box
@@ -107,12 +124,13 @@ body { margin: 0; padding: 0; }
         document.getElementById('speed').textContent = speed.toFixed(4);
         document.getElementById('catalog_number').textContent = catalog_number;
         document.getElementById('name').textContent = name;
+        document.getElementById('sunlit').textContent = sunlit;
 
         // Fly the map to the location using lat and lon
-        map.flyTo({
-          center: [lon, lat],
-          speed: 0.5
-        });
+        // map.flyTo({
+        //   center: [lon, lat],
+        //   speed: 0.5
+        // });
 
         // Return the location of the ISS as GeoJSON.
         return {
@@ -139,14 +157,16 @@ body { margin: 0; padding: 0; }
 });
 </script>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=K2D:wght@100;200&display=swap');
   #satellite-info {
     position: absolute;
-    top: 20px; /* Adjust the top position as needed */
+    top: 10px; /* Adjust the top position as needed */
     left: 20px; /* Adjust the left position as needed */
-    padding: 10px;
+    padding: 15px;
     background-color: rgba(255, 255, 255, 0.8);
     border-radius: 5px;
     box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+    font-family: 'K2D', sans-serif;
   }
   #satellite-passes {
     position: absolute;
@@ -156,7 +176,9 @@ body { margin: 0; padding: 0; }
     background-color: rgba(255, 255, 255, 0.8);
     border-radius: 5px;
     box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+    font-family: 'K2D', sans-serif;
   }
+
 </style>
 
 </body>
