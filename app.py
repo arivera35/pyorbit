@@ -20,8 +20,6 @@ station.long = '-106.4351'
 station.elev = 0
 
 epoch = dt.datetime.utcnow()
-
-
 observer_latitude = 31.767600
 observer_longitude = -106.43502
 
