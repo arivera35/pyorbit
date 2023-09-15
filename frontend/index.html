@@ -14,39 +14,49 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
 </head>
 <body>
   <div id="bgnd">
-  <div id="satellite-info">
-    <h2><span id="name"></span></h2>
-    <p><strong>Catalog Number:</strong> <span id="catalog_number"></span></p>
-    <p><strong>Latitude:</strong> <span id="lat"></span>°</p>
-    <p><strong>Longitude:</strong> <span id="lon"></span>°</p>
-    <p><strong>Azimuth:</strong> <span id="az"></span>°</p>
-    <p><strong>Elevation:</strong> <span id="el"></span>°</p>
-    <p><strong>Velocity:</strong> <span id="speed"></span> km/s</p>
-    <p><strong>Sunlit:</strong> <span id="sunlit"></span></p>
+    <div id="satellite-info">
+      <h2><span id="name"></span></h2>
+      <p><strong>Catalog Number:</strong> <span id="catalog_number"></span></p>
+      <p><strong>Latitude:</strong> <span id="lat"></span>°</p>
+      <p><strong>Longitude:</strong> <span id="lon"></span>°</p>
+      <p><strong>Azimuth:</strong> <span id="az"></span>°</p>
+      <p><strong>Elevation:</strong> <span id="el"></span>°</p>
+      <p><strong>Velocity:</strong> <span id="speed"></span> km/s</p>
+      <p><strong>Sunlit:</strong> <span id="sunlit"></span></p>
+    </div>
+    <div id="satellite-passes">
+      <h2>Future Passes</h2>
+      <p><strong>AOS:</strong> <span id="aos"></span></p>
+      <p><strong>LOS:</strong> <span id="los"></span></p>
+      <p><strong>Pass Duration:</strong> <span id="duration"></span> minutes</p>
+      <p>----------------------------</p>
+      <p><strong>AOS:</strong> <span id="aos2"></span></p>
+      <p><strong>LOS:</strong> <span id="los2"></span></p>
+      <p><strong>Pass Duration:</strong> <span id="duration2"></span> minutes</p>
+      <p>----------------------------</p>
+      <p><strong>AOS:</strong> <span id="aos3"></span></p>
+      <p><strong>LOS:</strong> <span id="los3"></span></p>
+      <p><strong>Pass Duration:</strong> <span id="duration3"></span> minutes</p>
+      <p>----------------------------</p>
+      <div class="container">
+        <div class="row justify-content-around">
+          <div class="col-4"><button>Add Satellite</button></div>
+          <div class="col-6"><button>View Another Satellite</button></div>
+        </div>
+      </div>
+    </div>
+  <!-- <form>
+    <div class="form-group">
+      <label for="catalog_number">Satellite Catalog Number</label>
+      <input class="form-control" id="input_catalog_number" placeholder="Enter catalog number">
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </form>      -->
+  <div id="map"></div>
+  <div id="header">
+    <img src="../images/23_Compact_Color@4x.png"/>
+    <h2 id="title">FRANCIS GROUND STATION DASHBOARD</h2>
   </div>
-  <div id="satellite-passes">
-    <h2>Future Passes</h2>
-    <p><strong>AOS:</strong> <span id="aos"></span></p>
-    <p><strong>LOS:</strong> <span id="los"></span></p>
-    <p><strong>Pass Duration:</strong> <span id="duration"></span> minutes</p>
-    <p>----------------------------</p>
-    <p><strong>AOS:</strong> <span id="aos2"></span></p>
-    <p><strong>LOS:</strong> <span id="los2"></span></p>
-    <p><strong>Pass Duration:</strong> <span id="duration2"></span> minutes</p>
-    <p>----------------------------</p>
-    <p><strong>AOS:</strong> <span id="aos3"></span></p>
-    <p><strong>LOS:</strong> <span id="los3"></span></p>
-    <p><strong>Pass Duration:</strong> <span id="duration3"></span> minutes</p>
-    <p>----------------------------</p>
-    <button>Add Satellite</button>
-  </div>
-
-  
-<div id="map"></div>
-<div id="header">
-  <img src="../images/23_Compact_Color@4x.png"/>
-  <h2 id="title">FRANCIS GROUND STATION DASHBOARD</h2>
-</div>
 </div>
 
 <script>
@@ -58,25 +68,24 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
     //     zoom: 1.5
     // });
     const map = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/mapbox/satellite-streets-v12',
-    projection: 'mercator'
-});
-
+      container: 'map',
+      style: 'mapbox://styles/mapbox/satellite-streets-v12',
+      projection: 'mercator'
+    });
 
     const marker1 = new mapboxgl.Marker()
     .setLngLat([-106.43502, 31.767600])
     .addTo(map);
 
     map.on('style.load', () => {
-    map.setFog({
+      map.setFog({
         color: 'rgb(186, 210, 235)', // Lower atmosphere
         'high-color': 'rgb(36, 92, 223)', // Upper atmosphere
         'horizon-blend': 0.002, // Atmosphere thickness (default 0.2 at low zooms)
         'space-color': 'rgb(11, 11, 25)', // Background color
         'star-intensity': 0.6 // Background star brightness (default 0.35 at low zoooms )
+      });
     });
-});
 
 
     map.on('load', async () => {
@@ -94,16 +103,10 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
             'type': 'symbol',
             'source': 'iss',
             'layout': {
-                // This icon is a part of the Mapbox Streets style.
-                // To view all images available in a Mapbox style, open
-                // the style in Mapbox Studio and click the "Images" tab.
-                // To add a new image to the style at runtime see
-                // https://docs.mapbox.com/mapbox-gl-js/example/add-image/
                 'icon-image': 'rocket',
                 'icon-size': 1.5
             }
         });
-        
 
         // Update the source from the API every 2 seconds.
         const updateSource = setInterval(async () => {
@@ -159,7 +162,7 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
 }
         
 
-        async function getLocation(updateSource) {
+  async function getLocation(updateSource) {
     try {
       const response = await fetch('http://127.0.0.1:5000/get_satellite_position', {
         method: 'POST',
@@ -173,7 +176,6 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
 
       if (response.status === 200) {
         const { lat, lon, az, el, speed, name, catalog_number, sunlit } = await response.json(); // Extract data
-        // console.log(lat, lon);
 
         // Update the content of the satellite-info box
         document.getElementById('lat').textContent = lat.toFixed(4);
@@ -244,17 +246,15 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
     font-size: 18px;
   }
   #title{
-    /* padding-top: 1%; */
+    padding-top: 0.5%;
+    padding-bottom: 1%;
     text-align: center;
     font-family: 'Alumni Sans', sans-serif;
-    font-size: 34px;
-    font-weight:bold;
+    font-size: 42px;
+    font-weight:300;
   }
   #bgnd{
     color: black;
-  }
-  #header{
-    /* background-color: red; */
   }
   img {
     position: absolute;

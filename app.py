@@ -7,12 +7,22 @@ from skyfield.api import load as skyfield_load
 from more_itertools import chunked
 import numpy as np
 import math
+import ephem
 import time
+import datetime as dt
 
 app = Flask(__name__)
 CORS(app)
 
-observer_latitude = +31.767600
+station = ephem.Observer()
+station.lat = '+31.7677'
+station.long = '-106.4351'
+station.elev = 0
+
+epoch = dt.datetime.utcnow()
+
+
+observer_latitude = 31.767600
 observer_longitude = -106.43502
 
 bluffton = wgs84.latlon(+31.767600, -106.43502)
@@ -21,6 +31,35 @@ bluffton = wgs84.latlon(+31.767600, -106.43502)
 ts = load.timescale()
 satellites = load.tle_file('https://www.celestrak.com/NORAD/elements/active.txt')
 satellite_dict =  {sat.model.satnum: sat for sat in satellites}
+
+def passes(station, satellite, start=None, duration=7):
+    result = []
+    if start is not None:
+        station.date = ephem.date(start)
+    end = ephem.date(station.date + duration)
+    while station.date < end:
+        t_aos, azr, t_max, elt, t_los, azs = station.next_pass(satellite)
+        result.append({'aos': t_aos.datetime(), 'los': t_los.datetime()})
+        station.date = t_los + ephem.second
+    return result
+
+def parse_tle_file():
+    tle_data = {}
+    current_catalog_number = None
+    current_tle_lines = []
+
+    with open('active.txt', 'r') as file:
+        for line in file:
+            line = line.strip()
+            if line.startswith('1 '):
+                current_tle_lines.append(line)
+            elif line.startswith('2 '):
+                current_tle_lines.append(line)
+                tle_data[current_catalog_number] = current_tle_lines
+                current_catalog_number = None
+                current_tle_lines = []
+
+    return tle_data
 
 def get_satellite_velocity(satellite):
     t = ts.now()
@@ -37,6 +76,7 @@ def get_satellite_positions(catalog_number):
     t = ts.now()
     num_positions = 10
     satellite = satellite_dict[catalog_number]
+    # print(satellite)
     difference = satellite - bluffton
     topocentric = difference.at(t)
 
@@ -52,46 +92,13 @@ def get_satellite_positions(catalog_number):
 
     return coordinates
 
-
-@app.route('/get_satellite_position', methods=['POST'])
-def get_satellite_position_route():
-    data = request.json
-    cat_num = data['catalog_number']
-    catalog_number = int(data['catalog_number'])  # Get the catalog number from JSON data
-    t = ts.now()
-    satellite = satellite_dict[catalog_number]
-    difference = satellite - bluffton
-    topocentric = difference.at(t)
-    el, az, distance= topocentric.altaz()
-
-    if el.degrees > 0:
-        print('The ISS is above the horizon')
-   
-    if satellite is None:
-        return jsonify({
-            'error': 'Satellite not found'
-        })
-    geocentric = satellite.at(t)
-    lat, lon = wgs84.latlon_of(geocentric)
-    height = wgs84.height_of(geocentric)
-    speed = get_satellite_velocity(satellite)
-    sunlit = is_satellite_sunlit(satellite)
-    return jsonify({
-        'lon': lon.degrees,
-        'lat': lat.degrees,
-        'az': az.degrees,
-        'el': el.degrees,
-        'speed': speed,
-        'sunlit': bool(sunlit),
-        'name': satellite.name,
-        'catalog_number': cat_num
-    })
-
 def calculate_pass_predictions(catalog_number, observer_location, start_time, end_time, min_elevation_deg):
+    
     satellite = satellite_dict.get(catalog_number)
     passes = []
     if not satellite:
         return []
+
 
     observer = wgs84.latlon(observer_location[0], observer_location[1])
     t, events = satellite.find_events(observer, start_time, end_time, altitude_degrees=min_elevation_deg)
@@ -132,6 +139,41 @@ def serialize_pass(satellite, pass_times, pass_events, observer):
         }
 
     return full_pass
+
+@app.route('/get_satellite_position', methods=['POST'])
+def get_satellite_position_route():
+    data = request.json
+    cat_num = data['catalog_number']
+    catalog_number = int(data['catalog_number'])  # Get the catalog number from JSON data
+    t = ts.now()
+    satellite = satellite_dict[catalog_number]
+    # print(satellite)
+    difference = satellite - bluffton
+    topocentric = difference.at(t)
+    el, az, distance= topocentric.altaz()
+
+    if el.degrees > 0:
+        print('The ISS is above the horizon')
+   
+    if satellite is None:
+        return jsonify({
+            'error': 'Satellite not found'
+        })
+    geocentric = satellite.at(t)
+    lat, lon = wgs84.latlon_of(geocentric)
+    height = wgs84.height_of(geocentric)
+    speed = get_satellite_velocity(satellite)
+    sunlit = is_satellite_sunlit(satellite)
+    return jsonify({
+        'lon': lon.degrees,
+        'lat': lat.degrees,
+        'az': az.degrees,
+        'el': el.degrees,
+        'speed': speed,
+        'sunlit': bool(sunlit),
+        'name': satellite.name,
+        'catalog_number': cat_num
+    })
 
 @app.route('/get_pass_predictions', methods=['POST'])
 def get_pass_predictions_route():
