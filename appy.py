@@ -136,6 +136,46 @@
 import ephem
 # import predict
 import datetime as dt
+from sgp4.earth_gravity import wgs84
+from sgp4.io import twoline2rv, verify_checksum, fix_checksum, compute_checksum
+
+# station = ephem.Observer()
+# station.lat = '+31.7677'
+# station.long = '-106.4351'
+# station.elev = 0
+
+# # TLE data for a satellite (without checksum)
+# line1 = "1 25544U 98067A   23261.44473810  .00015356  00000+0  28244-3 0  9997"
+# line2 = "2 25544  51.6419 226.5842 0005864  32.1953 116.9329 15.49383676416254"
+
+ 
+# def passes(station, satellite, start=None, duration=7):
+#     result = []
+#     if start is not None:
+#         station.date = ephem.date(start)
+#     end = ephem.date(station.date + duration)
+#     while station.date < end:
+#         t_aos, azr, t_max, elt, t_los, azs = station.next_pass(satellite)
+#         result.append({'aos': t_aos.datetime(), 'los': t_los.datetime()})
+#         station.date = t_los + ephem.second
+#     return result
+
+# # Calculate and append checksum for each line
+# checksum1 = str(compute_checksum(line1))
+# checksum2 = str(compute_checksum(line2))
+
+ 
+
+# # Append the checksum digits to the end of each line
+# line1 = line1[:-1] + checksum1
+# line2 = line2[:-1] + checksum2
+
+ 
+# epoch = dt.datetime.utcnow()
+# # Create a TLE object
+# tle = ephem.readtle("ISS (ZARYA)", line1, line2)
+# for i in passes(station, tle, epoch, 2):
+#     print("AOS ", i['aos'], "LOS ", i['los'], "DURATION ", (i['los']-i['aos']))
 
 def passes(station, satellite, start=None, duration=7):
     result = []
@@ -148,9 +188,9 @@ def passes(station, satellite, start=None, duration=7):
         station.date = t_los + ephem.second
     return result
 
-tle = """ISS (ZARYA)
-1 25544U 98067A   23258.21279622  .00017394  00000+0  31980-3 0  9998
-2 25544  51.6410 242.5802 0005771  19.7421  91.0046 15.49290350415756"""
+# tle = """ISS (ZARYA)             
+# 1 25544U 98067A   23261.44473810  .00015356  00000+0  28244-3 0  9997
+# 2 25544  51.6419 226.5842 0005864  32.1953 116.9329 15.49383676416254"""
 
 station = ephem.Observer()
 station.lat = '+31.7677'
@@ -159,12 +199,52 @@ station.elev = 0
 
 epoch = dt.datetime.utcnow()
 
-for i in passes(station, ephem.readtle(*tle.split("\n")), epoch, 2):
-    print("AOS ", i['aos'], "LOS ", i['los'], "DURATION ", (i['los']-i['aos']))
-
+# for i in passes(station, ephem.readtle(*tle), epoch, 2):
+#     print("AOS ", i['aos'], "LOS ", i['los'], "DURATION ", (i['los']-i['aos']))
 print("===============")
 
+def get_tle_by_catalog(file_path, catalog_number):
+    tle = []
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
 
+    for i, line in enumerate(lines):
+        if catalog_number in line:
+            tle.append((lines[i-1]))
+            tle.append((line))
+            tle.append((lines[i + 1]))
+            break
+    return tle
+
+# Main program
+tle_file_path = 'active.txt'  # Replace with the path to your TLE file
+catalog_number = input("Enter the catalog number: ")
+tle = get_tle_by_catalog(tle_file_path, catalog_number)
+print(type(tle))
+
+print(fix_checksum(tle[1]))
+print(fix_checksum(tle[2]))
+tle1_fixed = (fix_checksum(tle[1]), fix_checksum(tle[2]))
+
+for i in passes(station, ephem.readtle("ISS (ZARYA)", tle1_fixed[0], tle1_fixed[1]), epoch, 2):
+    print("AOS ", i['aos'], "LOS ", i['los'], "DURATION ", (i['los']-i['aos']))
+
+# for i in passes(station, ephem.readtle("ISS (ZARYA)", "1 25544U 98067A   23261.44473810  .00015356  00000+0  28244-3 0  9997", "2 25544  51.6419 226.5842 0005864  32.1953 116.9329 15.49383676416254"), epoch, 2):
+#     print("AOS ", i['aos'], "LOS ", i['los'], "DURATION ", (i['los']-i['aos']))
+
+
+
+
+
+
+
+
+
+
+
+
+
+######################################################################################
 # p = predict.transits(tle, (station.lat, -station.long, station.elev), (epoch - dt.datetime(1970,1,1)).total_seconds())
 # for i in range(1, 8):
 #         transit = next(p)
