@@ -20,15 +20,28 @@ station.long = '-106.4351'
 station.elev = 0
 
 epoch = dt.datetime.utcnow()
-observer_latitude = 31.767600
-observer_longitude = -106.43502
+observer_latitude = 31.7677
+observer_longitude = -106.4351
 
-bluffton = wgs84.latlon(+31.767600, -106.43502)
+bluffton = wgs84.latlon(+31.7677, -106.4351)
 
 # Fetch TLEs and store them in a dictionary
 ts = load.timescale()
 satellites = load.tle_file('https://www.celestrak.com/NORAD/elements/active.txt')
 satellite_dict =  {sat.model.satnum: sat for sat in satellites}
+
+def get_tle_by_catalog(catalog_number):
+    tle = []
+    with open('active.txt', 'r') as file:
+        lines = file.readlines()
+
+    for i, line in enumerate(lines):
+        if catalog_number in line:
+            tle.append((lines[i-1]))
+            tle.append((line))
+            tle.append((lines[i + 1]))
+            break
+    return tle
 
 def passes(station, satellite, start=None, duration=7):
     result = []

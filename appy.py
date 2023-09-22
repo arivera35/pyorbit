@@ -184,7 +184,7 @@ def passes(station, satellite, start=None, duration=7):
     end = ephem.date(station.date + duration)
     while station.date < end:
         t_aos, azr, t_max, elt, t_los, azs = station.next_pass(satellite)
-        result.append({'aos': t_aos.datetime(), 'los': t_los.datetime()})
+        result.append({'aos': t_aos.datetime(), 'aos_az': azr, 'tmax':t_max.datetime(), 'los': t_los.datetime(), 'los_az': azs, 'max_el': elt})
         station.date = t_los + ephem.second
     return result
 
@@ -203,9 +203,9 @@ epoch = dt.datetime.utcnow()
 #     print("AOS ", i['aos'], "LOS ", i['los'], "DURATION ", (i['los']-i['aos']))
 print("===============")
 
-def get_tle_by_catalog(file_path, catalog_number):
+def get_tle_by_catalog(catalog_number):
     tle = []
-    with open(file_path, 'r') as file:
+    with open('active.txt', 'r') as file:
         lines = file.readlines()
 
     for i, line in enumerate(lines):
@@ -217,9 +217,8 @@ def get_tle_by_catalog(file_path, catalog_number):
     return tle
 
 # Main program
-tle_file_path = 'active.txt'  # Replace with the path to your TLE file
 catalog_number = input("Enter the catalog number: ")
-tle = get_tle_by_catalog(tle_file_path, catalog_number)
+tle = get_tle_by_catalog(catalog_number)
 print(type(tle))
 
 print(fix_checksum(tle[1]))
@@ -227,7 +226,7 @@ print(fix_checksum(tle[2]))
 tle1_fixed = (fix_checksum(tle[1]), fix_checksum(tle[2]))
 
 for i in passes(station, ephem.readtle("ISS (ZARYA)", tle1_fixed[0], tle1_fixed[1]), epoch, 2):
-    print("AOS ", i['aos'], "LOS ", i['los'], "DURATION ", (i['los']-i['aos']))
+    print("AOS ", i['aos'], "LOS ", i['los'], "DURATION ", (i['los']-i['aos']), " ELEVATION ", i['max_el'])
 
 # for i in passes(station, ephem.readtle("ISS (ZARYA)", "1 25544U 98067A   23261.44473810  .00015356  00000+0  28244-3 0  9997", "2 25544  51.6419 226.5842 0005864  32.1953 116.9329 15.49383676416254"), epoch, 2):
 #     print("AOS ", i['aos'], "LOS ", i['los'], "DURATION ", (i['los']-i['aos']))
