@@ -219,14 +219,14 @@ def get_tle_by_catalog(catalog_number):
 # Main program
 catalog_number = input("Enter the catalog number: ")
 tle = get_tle_by_catalog(catalog_number)
-print(type(tle))
+# print(type(tle))
 
 print(fix_checksum(tle[1]))
 print(fix_checksum(tle[2]))
 tle1_fixed = (fix_checksum(tle[1]), fix_checksum(tle[2]))
 
-for i in passes(station, ephem.readtle("ISS (ZARYA)", tle1_fixed[0], tle1_fixed[1]), epoch, 2):
-    print("AOS ", i['aos'], "LOS ", i['los'], "DURATION ", (i['los']-i['aos']), " ELEVATION ", i['max_el'])
+for i in passes(station, ephem.readtle("ISS (ZARYA)", tle1_fixed[0], tle1_fixed[1]), epoch, 3):
+    print("AOS ", i['aos'], "   LOS ", i['los'], "   DURATION ", (i['los']-i['aos']))
 
 # for i in passes(station, ephem.readtle("ISS (ZARYA)", "1 25544U 98067A   23261.44473810  .00015356  00000+0  28244-3 0  9997", "2 25544  51.6419 226.5842 0005864  32.1953 116.9329 15.49383676416254"), epoch, 2):
 #     print("AOS ", i['aos'], "LOS ", i['los'], "DURATION ", (i['los']-i['aos']))

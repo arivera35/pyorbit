@@ -10,6 +10,7 @@ import math
 import ephem
 import time
 import datetime as dt
+from sgp4.io import twoline2rv, verify_checksum, fix_checksum, compute_checksum
 
 app = Flask(__name__)
 CORS(app)
@@ -30,6 +31,7 @@ ts = load.timescale()
 satellites = load.tle_file('https://www.celestrak.com/NORAD/elements/active.txt')
 satellite_dict =  {sat.model.satnum: sat for sat in satellites}
 
+
 def get_tle_by_catalog(catalog_number):
     tle = []
     with open('active.txt', 'r') as file:
@@ -41,7 +43,8 @@ def get_tle_by_catalog(catalog_number):
             tle.append((line))
             tle.append((lines[i + 1]))
             break
-    return tle
+    tle_fixed = (fix_checksum(tle[1]), fix_checksum(tle[2]))
+    return tle_fixed, tle[0]
 
 def passes(station, satellite, start=None, duration=7):
     result = []
@@ -98,7 +101,7 @@ def get_satellite_positions(catalog_number):
         lat, lon = wgs84.latlon_of(geocentric)
         coordinates.append((lat.degrees, lon.degrees))  # Append as a tuple
         # Increment the time for the next position
-        time.sleep(.3)
+        time.sleep(.2)
         #t = t + timedelta(seconds = 3)  # Increment by 1 minute (adjust as needed)
 
     return coordinates
@@ -199,6 +202,20 @@ def get_pass_predictions_route():
     print(pass_predictions)
     return jsonify(pass_predictions)
 
+@app.route('/calculate_passes', methods=['POST'])
+def calculate_passes_route():
+    data = request.json
+    catalog_number = str(data['catalog_number'])
+    days = data['days']
+    full_tle = get_tle_by_catalog(catalog_number)
+    print(full_tle[0][0])
+    print(type(full_tle[1]))
+    passes_predicted = passes(station, ephem.readtle(full_tle[1], full_tle[0][0], full_tle[0][1]), epoch, 3)
+    print(passes_predicted[0])
+    return jsonify(passes_predicted)
+    # print(passes_predictions)
+
+
 @app.route('/get_position_chunk', methods=['POST'])
 def get_position_chunk():
     data = request.json
@@ -207,7 +224,6 @@ def get_position_chunk():
     return jsonify({
         'coordinates': coordinates
     })
-
 
 def create_app():
     return app

@@ -104,7 +104,7 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
             'source': 'iss',
             'layout': {
                 'icon-image': 'rocket',
-                'icon-size': 1.5
+                'icon-size': 2
             }
         });
 
@@ -116,41 +116,41 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
 
         async function getNextPasses() {
   try {
-    const response = await fetch('http://127.0.0.1:5000/get_pass_predictions', {
+    const response = await fetch('http://127.0.0.1:5000/calculate_passes', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        catalog_number: "25544",
-        min_elevation: 20.0,
-        days: 2
+        catalog_number: "99999",
+        days: 3
       })
     });
     if (response.status === 200) {
       const passPredictions = await response.json();
       if (passPredictions.length > 0) {
         const firstPass = passPredictions[0];
-        const aosTime = firstPass.rise.utc_datetime;
-        const losTime = firstPass.culmination.utc_datetime;
-        const duration = firstPass.pass_duration_minutes;
+        console.log(firstPass)
+        const aosTime = firstPass.aos;
+        const losTime = firstPass.los;
+        // const duration = firstPass.pass_duration_minutes;
         document.getElementById('aos').textContent = aosTime;
         document.getElementById('los').textContent = losTime;
-        document.getElementById('duration').textContent = duration.toFixed(2);
-        const secondPass = passPredictions[1];
-        const aosTime2 = secondPass.rise.utc_datetime;
-        const losTime2 = secondPass.culmination.utc_datetime;
-        const duration2 = secondPass.pass_duration_minutes;
-        document.getElementById('aos2').textContent = aosTime2;
-        document.getElementById('los2').textContent = losTime2;
-        document.getElementById('duration2').textContent = duration2.toFixed(2);
-        const thirdPass = passPredictions[2];
-        const aosTime3 = thirdPass.rise.utc_datetime;
-        const losTime3 = thirdPass.culmination.utc_datetime;
-        const duration3 = thirdPass.pass_duration_minutes;
-        document.getElementById('aos3').textContent = aosTime3;
-        document.getElementById('los3').textContent = losTime3;
-        document.getElementById('duration3').textContent = duration3.toFixed(2);
+        // document.getElementById('duration').textContent = duration.toFixed(2);
+        // const secondPass = passPredictions[1];
+        // const aosTime2 = secondPass.rise.utc_datetime;
+        // const losTime2 = secondPass.culmination.utc_datetime;
+        // const duration2 = secondPass.pass_duration_minutes;
+        // document.getElementById('aos2').textContent = aosTime2;
+        // document.getElementById('los2').textContent = losTime2;
+        // document.getElementById('duration2').textContent = duration2.toFixed(2);
+        // const thirdPass = passPredictions[2];
+        // const aosTime3 = thirdPass.rise.utc_datetime;
+        // const losTime3 = thirdPass.culmination.utc_datetime;
+        // const duration3 = thirdPass.pass_duration_minutes;
+        // document.getElementById('aos3').textContent = aosTime3;
+        // document.getElementById('los3').textContent = losTime3;
+        // document.getElementById('duration3').textContent = duration3.toFixed(2);
 
       }
     } else {
@@ -170,7 +170,7 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          catalog_number: "25544"
+          catalog_number: "99999"
         })
       });
 
