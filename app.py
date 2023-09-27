@@ -11,9 +11,13 @@ import ephem
 import time
 import datetime as dt
 from sgp4.io import twoline2rv, verify_checksum, fix_checksum, compute_checksum
+from flask_apscheduler import APScheduler
+import os
+
 
 app = Flask(__name__)
 CORS(app)
+scheduler = APScheduler()
 
 station = ephem.Observer()
 station.lat = '+31.7677'
@@ -31,6 +35,12 @@ ts = load.timescale()
 satellites = load.tle_file('https://www.celestrak.com/NORAD/elements/active.txt')
 satellite_dict =  {sat.model.satnum: sat for sat in satellites}
 
+def update_tles():
+    global satellite_dict
+    os.remove('active.txt')
+    updated_satellites = load.tle_file('https://www.celestrak.com/NORAD/elements/active.txt')
+    satellite_dict =  {sat.model.satnum: sat for sat in updated_satellites}
+    print('Updated TLEs')
 
 def get_tle_by_catalog(catalog_number):
     tle = []
@@ -229,4 +239,6 @@ def create_app():
     return app
 
 if __name__ == '__main__':
+    scheduler.add_job(id = 'TLE Update', func = update_tles, trigger="interval", hours = 23)
+    scheduler.start()
     app.run(debug=True)
