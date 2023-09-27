@@ -55,7 +55,7 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
   <div id="map"></div>
   <div id="header">
     <img src="../images/23_Compact_Color@4x.png"/>
-    <h2 id="title">FRANCIS GROUND STATION DASHBOARD</h2>
+    <!-- <h2 id="title">FRANCIS GROUND STATION DASHBOARD</h2> -->
   </div>
 </div>
 
@@ -69,7 +69,8 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
     // });
     const map = new mapboxgl.Map({
       container: 'map',
-      style: 'mapbox://styles/mapbox/satellite-streets-v12',
+      // style: 'mapbox://styles/mapbox/satellite-streets-v12',
+      style: 'mapbox://styles/arivera35/cln26huxk06l001qb2vgd6pl3',
       projection: 'mercator'
     });
 
@@ -92,6 +93,7 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
         // Get the initial location of the International Space Station (ISS).
         const geojson = await getLocation();
         getNextPasses();
+
         // Add the ISS location as a source.
         map.addSource('iss', {
             type: 'geojson',
@@ -104,7 +106,7 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
             'source': 'iss',
             'layout': {
                 'icon-image': 'rocket',
-                'icon-size': 2
+                'icon-size': 1.5
             }
         });
 
@@ -115,107 +117,104 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
         }, 1000);
 
         async function getNextPasses() {
-  try {
-    const response = await fetch('http://127.0.0.1:5000/calculate_passes', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        catalog_number: "25544",
-        days: 3
-      })
-    });
-    if (response.status === 200) {
-      const passPredictions = await response.json();
-      if (passPredictions.length > 0) {
-        const firstPass = passPredictions[0];
-        console.log(firstPass)
-        const aosTime = firstPass.aos;
-        const losTime = firstPass.los;
-        // const duration = firstPass.pass_duration_minutes;
-        document.getElementById('aos').textContent = aosTime;
-        document.getElementById('los').textContent = losTime;
-        // document.getElementById('duration').textContent = duration.toFixed(2);
-        // const secondPass = passPredictions[1];
-        // const aosTime2 = secondPass.rise.utc_datetime;
-        // const losTime2 = secondPass.culmination.utc_datetime;
-        // const duration2 = secondPass.pass_duration_minutes;
-        // document.getElementById('aos2').textContent = aosTime2;
-        // document.getElementById('los2').textContent = losTime2;
-        // document.getElementById('duration2').textContent = duration2.toFixed(2);
-        // const thirdPass = passPredictions[2];
-        // const aosTime3 = thirdPass.rise.utc_datetime;
-        // const losTime3 = thirdPass.culmination.utc_datetime;
-        // const duration3 = thirdPass.pass_duration_minutes;
-        // document.getElementById('aos3').textContent = aosTime3;
-        // document.getElementById('los3').textContent = losTime3;
-        // document.getElementById('duration3').textContent = duration3.toFixed(2);
-
-      }
-    } else {
-      console.error('Request failed with status:', response.status);
-    }
-  } catch (err) {
-    console.error('Error fetching pass predictions:', err);
-  }
-}
-        
-
-  async function getLocation(updateSource) {
-    try {
-      const response = await fetch('http://127.0.0.1:5000/get_satellite_position', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          catalog_number: "25544"
-        })
-      });
-
-      if (response.status === 200) {
-        const { lat, lon, az, el, speed, name, catalog_number, sunlit } = await response.json(); // Extract data
-
-        // Update the content of the satellite-info box
-        document.getElementById('lat').textContent = lat.toFixed(4);
-        document.getElementById('lon').textContent = lon.toFixed(4);
-        document.getElementById('az').textContent = az.toFixed(2);
-        document.getElementById('el').textContent = el.toFixed(2);
-        document.getElementById('speed').textContent = speed.toFixed(4);
-        document.getElementById('catalog_number').textContent = catalog_number;
-        document.getElementById('name').textContent = name;
-        document.getElementById('sunlit').textContent = sunlit;
-
-        // Fly the map to the location using lat and lon
-
-        // map.flyTo({
-        //   center: [lon, lat],
-        //   speed: 0.5
-        // });
-
-        // Return the location of the ISS as GeoJSON.
-        return {
-          'type': 'FeatureCollection',
-          'features': [
-            {
-              'type': 'Feature',
-              'geometry': {
-                'type': 'Point',
-                'coordinates': [lon, lat]
+          try {
+            const response = await fetch('http://127.0.0.1:5000/calculate_passes', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                catalog_number: "25544",
+                days: 3
+              })
+            });
+            if (response.status === 200) {
+              const passPredictions = await response.json();
+              if (passPredictions.length > 0) {
+                const firstPass = passPredictions[0];
+                console.log(passPredictions[2])
+                const aosTime = firstPass.aos;
+                const losTime = firstPass.los;
+                const duration = firstPass.duration;
+                document.getElementById('aos').textContent = aosTime;
+                document.getElementById('los').textContent = losTime;
+                document.getElementById('duration').textContent = duration;
+                const secondPass = passPredictions[1];
+                const aosTime2 = secondPass.aos;
+                const losTime2 = secondPass.los;
+                const duration2 = secondPass.duration;
+                document.getElementById('aos2').textContent = aosTime2;
+                document.getElementById('los2').textContent = losTime2;
+                document.getElementById('duration2').textContent = duration2;
+                const thirdPass = passPredictions[2];
+                const aosTime3 = thirdPass.aos;
+                const losTime3 = thirdPass.los;
+                const duration3 = thirdPass.duration;
+                document.getElementById('aos3').textContent = aosTime3;
+                document.getElementById('los3').textContent = losTime3;
+                document.getElementById('duration3').textContent = duration3;
               }
+            } else {
+              console.error('Request failed with status:', response.status);
             }
-          ]
-        };
-      } else {
-        console.error('Request failed with status:', response.status);
-      }
-    } catch (err) {
-      // If the updateSource interval is defined, clear the interval to stop updating the source.
-      if (updateSource) clearInterval(updateSource);
-      throw new Error(err);
-    }
-  }
+          } catch (err) {
+            console.error('Error fetching pass predictions:', err);
+          }
+        }
+        
+        async function getLocation(updateSource) {
+          try {
+            const response = await fetch('http://127.0.0.1:5000/get_satellite_position', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                catalog_number: "25544"
+              })
+            });
+
+            if (response.status === 200) {
+              const { lat, lon, az, el, speed, name, catalog_number, sunlit } = await response.json(); // Extract data
+
+              // Update the content of the satellite-info box
+              document.getElementById('lat').textContent = lat.toFixed(4);
+              document.getElementById('lon').textContent = lon.toFixed(4);
+              document.getElementById('az').textContent = az.toFixed(2);
+              document.getElementById('el').textContent = el.toFixed(2);
+              document.getElementById('speed').textContent = speed.toFixed(4);
+              document.getElementById('catalog_number').textContent = catalog_number;
+              document.getElementById('name').textContent = name;
+              document.getElementById('sunlit').textContent = sunlit;
+
+              // Fly the map to the location using lat and lon
+              // map.flyTo({
+              //   center: [lon, lat],
+              //   speed: 0.5
+              // });
+
+              // Return the location of the ISS as GeoJSON.
+              return {
+                'type': 'FeatureCollection',
+                'features': [
+                  {
+                    'type': 'Feature',
+                    'geometry': {
+                      'type': 'Point',
+                      'coordinates': [lon, lat]
+                    }
+                  }
+                ]
+              };
+            } else {
+              console.error('Request failed with status:', response.status);
+            }
+          } catch (err) {
+            // If the updateSource interval is defined, clear the interval to stop updating the source.
+            if (updateSource) clearInterval(updateSource);
+            throw new Error(err);
+          }
+        }
 });
 </script>
 <style>

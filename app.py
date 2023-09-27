@@ -1,19 +1,15 @@
 from flask import Flask, request, jsonify
+from flask_apscheduler import APScheduler
 from flask_cors import CORS
-from skyfield.api import Topos, load, EarthSatellite, wgs84
-from datetime import datetime, timedelta
-import pytz
-from skyfield.api import load as skyfield_load
+from skyfield.api import load, wgs84
+from datetime import timedelta
 from more_itertools import chunked
 import numpy as np
-import math
 import ephem
 import time
 import datetime as dt
-from sgp4.io import twoline2rv, verify_checksum, fix_checksum, compute_checksum
-from flask_apscheduler import APScheduler
+from sgp4.io import fix_checksum
 import os
-
 
 app = Flask(__name__)
 CORS(app)
@@ -63,7 +59,7 @@ def passes(station, satellite, start=None, duration=7):
     end = ephem.date(station.date + duration)
     while station.date < end:
         t_aos, azr, t_max, elt, t_los, azs = station.next_pass(satellite)
-        result.append({'aos': t_aos.datetime(), 'los': t_los.datetime()})
+        result.append({'aos': t_aos.datetime(), 'los': t_los.datetime(), 'duration': 0})
         station.date = t_los + ephem.second
     return result
 
@@ -93,8 +89,7 @@ def get_satellite_velocity(satellite):
     return speed
 
 def is_satellite_sunlit(satellite):
-    return satellite.at(ts.now()).is_sunlit(skyfield_load("de421.bsp"))
-
+    return satellite.at(ts.now()).is_sunlit(load("de421.bsp"))
 
 def get_satellite_positions(catalog_number):
     t = ts.now()
@@ -151,7 +146,7 @@ def serialize_pass(satellite, pass_times, pass_events, observer):
         geometric_sat = (satellite - observer).at(time)
 
         sat_alt, sat_az, sat_d = geometric_sat.altaz()
-        is_sunlit = geometric_sat.is_sunlit(skyfield_load("de421.bsp"))
+        is_sunlit = geometric_sat.is_sunlit(load("de421.bsp"))
         event = ('rise', 'culmination', 'set')[event_type]
 
         full_pass[event] = {
@@ -164,6 +159,15 @@ def serialize_pass(satellite, pass_times, pass_events, observer):
 
     return full_pass
 
+def serialize_pass_duration(pass_prediction):
+    pass_duration = {
+        "aos": pass_prediction['aos'],
+        "los" : pass_prediction['los'],
+        "duration" : str(pass_prediction['los'] - pass_prediction['aos'])
+    }
+
+    return pass_duration
+
 @app.route('/get_satellite_position', methods=['POST'])
 def get_satellite_position_route():
     data = request.json
@@ -171,7 +175,6 @@ def get_satellite_position_route():
     catalog_number = int(data['catalog_number'])  # Get the catalog number from JSON data
     t = ts.now()
     satellite = satellite_dict[catalog_number]
-    # print(satellite)
     difference = satellite - bluffton
     topocentric = difference.at(t)
     el, az, distance= topocentric.altaz()
@@ -221,10 +224,10 @@ def calculate_passes_route():
     print(full_tle[0][0])
     print(type(full_tle[1]))
     passes_predicted = passes(station, ephem.readtle(full_tle[1], full_tle[0][0], full_tle[0][1]), epoch, 3)
-    print(passes_predicted[0])
-    return jsonify(passes_predicted)
-    # print(passes_predictions)
-
+    all_passes = []
+    for i in passes_predicted:
+        all_passes.append(serialize_pass_duration(i))
+    return all_passes
 
 @app.route('/get_position_chunk', methods=['POST'])
 def get_position_chunk():
