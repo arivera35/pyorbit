@@ -2,20 +2,29 @@ import zmq
 import time
 import numpy 
 
-ctx = zmq.Context()
-socket = ctx.socket(zmq.REQ)
-socket.bind("tcp://127.0.0.1:4444")
+# ZMQ SOCKET - TRANSMITTER
+# ctx = zmq.Context()
+# socket = ctx.socket(zmq.PUB)
 # socket.bind("tcp://127.0.0.1:1234")
+# data = numpy.array([1, 2, 3, 4, 5, 6], dtype=numpy.complex64)
 
-for request in range (1,10):
-    print ("Sending request ", request,"...")
-    socket.send ("Hello")
-    #  Get the reply.
-    message = socket.recv()
-    print ("Received reply ", request, "[", message, "]")
+# while True:
+#     socket.send(data)
+#     time.sleep(.01)
 
-data = numpy.array([1, 2], dtype=numpy.complex64)
+
+# ZMQ SOCKET - RECEIVER
+ctx = zmq.Context()
+socket = ctx.socket(zmq.SUB)
+socket.setsockopt_string(zmq.SUBSCRIBE,'')
+# socket.setsockopt(zmq.SUBSCRIBE, b"")
+socket.connect("tcp://127.0.0.1:4444")
+print('Connected')
 
 while True:
-    socket.send(data)
-    time.sleep(.09)
+    # print('about to receive')
+    # message = socket.recv()
+    message = socket.recv()
+    # print('received')
+    print(message)
+    time.sleep(1)
