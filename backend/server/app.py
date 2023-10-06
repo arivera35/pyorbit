@@ -118,7 +118,6 @@ def calculate_pass_predictions(catalog_number, observer_location, start_time, en
     if not satellite:
         return []
 
-
     observer = wgs84.latlon(observer_location[0], observer_location[1])
     t, events = satellite.find_events(observer, start_time, end_time, altitude_degrees=min_elevation_deg)
     
