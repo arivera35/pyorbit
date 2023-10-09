@@ -78,7 +78,6 @@ def parse_tle_file():
                 tle_data[current_catalog_number] = current_tle_lines
                 current_catalog_number = None
                 current_tle_lines = []
-
     return tle_data
 
 def get_satellite_velocity(satellite):
@@ -95,7 +94,6 @@ def get_satellite_positions(catalog_number):
     t = ts.now()
     num_positions = 10
     satellite = satellite_dict[catalog_number]
-    # print(satellite)
     difference = satellite - bluffton
     topocentric = difference.at(t)
 
@@ -108,7 +106,6 @@ def get_satellite_positions(catalog_number):
         # Increment the time for the next position
         time.sleep(.2)
         #t = t + timedelta(seconds = 3)  # Increment by 1 minute (adjust as needed)
-
     return coordinates
 
 def calculate_pass_predictions(catalog_number, observer_location, start_time, end_time, min_elevation_deg):
@@ -211,7 +208,6 @@ def get_pass_predictions_route():
     end_time = start_time + timedelta(days=days)
     observer_location = (observer_latitude, observer_longitude)
     pass_predictions = calculate_pass_predictions(catalog_number, observer_location, start_time, end_time, min_elevation_deg)
-    print(pass_predictions)
     return jsonify(pass_predictions)
 
 @app.route('/calculate_passes', methods=['POST'])
@@ -220,8 +216,6 @@ def calculate_passes_route():
     catalog_number = str(data['catalog_number'])
     days = data['days']
     full_tle = get_tle_by_catalog(catalog_number)
-    print(full_tle[0][0])
-    print(type(full_tle[1]))
     passes_predicted = passes(station, ephem.readtle(full_tle[1], full_tle[0][0], full_tle[0][1]), epoch, 3)
     all_passes = []
     for i in passes_predicted:
@@ -243,4 +237,4 @@ def create_app():
 if __name__ == '__main__':
     scheduler.add_job(id = 'TLE Update', func = update_tles, trigger="interval", hours = 23)
     scheduler.start()
-    app.run(debug=True)
+    app.run(debug=True) 
