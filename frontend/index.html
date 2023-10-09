@@ -9,13 +9,12 @@
 <script src="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js"></script>
 <style>
 body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
-#map { position: absolute;  top: 2%; bottom: 1%; width: 88%; z-index: -1; height: 100% }
+#map { position: absolute;  top: 2%; bottom: 1%; width: 88%; z-index: -5; height: 100% }
 </style>
 </head>
 <body>
   <div id="bgnd">
     <section id="satellite-info">
-    <!-- <div id="satellite-info"> -->
       <h2><span id="name"></span></h2>
       <p><strong>Catalog Number:</strong> <span id="catalog_number"></span></p>
       <p><strong>Latitude:</strong> <span id="lat"></span>°</p>
@@ -24,11 +23,9 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
       <p><strong>Elevation:</strong> <span id="el"></span>°</p>
       <p><strong>Velocity:</strong> <span id="speed"></span> km/s</p>
       <p><strong>Sunlit:</strong> <span id="sunlit"></span></p>
-    <!-- </div> -->
     </section>
     <section id="satellite-passes">
       <h2><span style="width: 100%">Future Passes</span></h2>
-      <!-- <h2 id="title">Future Passes</h2> -->
       <p><strong>AOS:</strong> <span id="aos"></span></p>
       <p><strong>LOS:</strong> <span id="los"></span></p>
       <p><strong>Pass Duration:</strong> <span id="duration"></span> minutes</p>
@@ -41,35 +38,36 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
       <p><strong>LOS:</strong> <span id="los3"></span></p>
       <p><strong>Pass Duration:</strong> <span id="duration3"></span> minutes</p>
       <p>----------------------------</p>
-      <!-- <div class="container">
-        <div class="row justify-content-around">
-          <div class="col-4"><button>Add Satellite</button></div>
-          <div class="col-6"><button>View Another Satellite</button></div>
-        </div>
-      </div> -->
     </section>
-  <!-- <form>
-    <div class="form-group">
-      <label for="catalog_number">Satellite Catalog Number</label>
-      <input class="form-control" id="input_catalog_number" placeholder="Enter catalog number">
-    </div>
-    <button type="submit" class="btn btn-primary">Submit</button>
-  </form>      -->
-  <div class="topnav">
-    <img src="../images/23_Compact_OneColorReversed@4x.png"/>
-    <a class="active" href="./index.html">Home</a>
-    <a href="./datadisplay.html">Data</a>
+  <ul>
+    <li><img src="../images/23_Compact_OneColorReversed@4x.png"/></li>
+    <li><a href="index.html">Home</a></li>
+    <li><a href="datadisplay.html">Data</a></li>
+    <li class="dropdown">
+      <button class="dropbtn" onclick="openForm()">Add Satellite</button>
+    </li>
+  </ul>
+  <div class="form-popup" id="myForm">
+    <form action="/action_page.php" class="form-container">
+      <h1>Satellite</h1>
+  
+      <label for="catalog_num"><b>NORAD Catalog Number</b></label>
+      <input type="text" placeholder="Catalog Number" name="catalog_num" required>
+  
+      <button type="submit" class="btn">Submit</button>
+      <button type="button" class="btn cancel" onclick="closeForm()">Close</button>
+    </form>
   </div>
   <div id="map"></div>
 </div>
 <script>
-	mapboxgl.accessToken = 'pk.eyJ1IjoiYXJpdmVyYTM1IiwiYSI6ImNrbHVrenM2MDF6aXgybmx3bDN2ZjFtMm0ifQ.PnjnSxGKp1YMV7aik9cFjA';
-    // const map = new mapboxgl.Map({
-    //     container: 'map',
-    //     // Choose from Mapbox's core styles, or make your own style with Mapbox Studio
-    //     style: 'mapbox://styles/mapbox/streets-v12',
-    //     zoom: 1.5
-    // });
+	  mapboxgl.accessToken = 'pk.eyJ1IjoiYXJpdmVyYTM1IiwiYSI6ImNrbHVrenM2MDF6aXgybmx3bDN2ZjFtMm0ifQ.PnjnSxGKp1YMV7aik9cFjA';
+    function openForm() {
+      document.getElementById("myForm").style.display = "block";
+    }
+    function closeForm() {
+      document.getElementById("myForm").style.display = "none";
+    }
     const map = new mapboxgl.Map({
       container: 'map',
       // style: 'mapbox://styles/mapbox/satellite-streets-v12',
@@ -190,12 +188,6 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
               document.getElementById('name').textContent = name;
               document.getElementById('sunlit').textContent = sunlit;
 
-              // Fly the map to the location using lat and lon
-              // map.flyTo({
-              //   center: [lon, lat],
-              //   speed: 0.5
-              // });
-
               // Return the location of the ISS as GeoJSON.
               return {
                 'type': 'FeatureCollection',
@@ -239,21 +231,88 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
     min-height: 350px;
     overflow: hidden;
   }
+  ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #333;
+    z-index: 5;
+  }
+  li {
+    float: left;
+  }
+
+  li a,  .dropbtn{
+    display: inline-block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+  }
+
+  li a:hover, .dropdown:hover .dropbtn {
+    background-color: #c9720e;
+  }
+
+  li.dropdown {
+    display: inline-block;
+  }
+
+  .dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #c9720e;
+    min-width: 160px;
+    z-index: 3;
+  }
+
+  .dropdown-content a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    text-align: left;
+    z-index: 3;
+  }
+
+  .dropdown-content a:hover {
+    background-color: #f1f1f1;
+    z-index: 3;
+  }
+
+  .a {
+    z-index: 3;
+  }
+
+  .dropdown:hover .dropdown-content {
+    display: block;
+    z-index: 3;
+  }
+
+  .dropbtn {
+    background-color: #333;
+    border: none;
+    border-radius: 0px;
+    border-color: #333;
+  }
+
+  .dropbtn::after {
+    color: #c9720e;
+    padding-left: 5px;
+
+  }
   #satellite-passes {
     min-height: 350px;
     position: absolute;
     overflow: hidden;
     top: 440px; 
-    /* padding-top: 70%; */
-    /* right: 3%; Adjust the left position as needed */
     right: 1%;
     left: 89%;
     padding: 10px;
     background-color: none;
-    /* border-radius: 5px; */
     box-shadow: none;
     font-family: 'K2D', sans-serif;
-    /* font-size: 18px; */
     font-size:0.7vw;
   }
   #title{
@@ -261,7 +320,6 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
     padding-bottom: 1%;
     text-align: center;
     font-family: 'Alumni Sans', sans-serif;
-    /* font-size: 32px; */
     font-size:1vw;
     font-weight:300;
   }
@@ -273,12 +331,6 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
     max-width: 150px;
     height: auto;
     padding-top: 0.1%;
-    /* position: absolute; */
-    /* width: 150px; */
-    /* height: 55px; */
-    /* height : 5%;
-    top: 0.3%;
-    left: 0.1%; */
   }
   .topnav {
     overflow: hidden;
@@ -301,6 +353,91 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
   .topnav a.active {
     background-color: #c9720e;
     color: white;
+  }
+  .configure {
+    background-color: #333;
+    color: white;
+    padding-top: 18px;
+    text-decoration: none;
+    font-size: 18px;
+    font-family: 'K2D', sans-serif;
+    font-weight:300;
+    border: none;
+  }
+
+  .open-button {
+    background-color: #555;
+    color: white;
+    padding: 16px 20px;
+    border: none;
+    cursor: pointer;
+    opacity: 0.8;
+    position: fixed;
+    bottom: 23px;
+    right: 28px;
+    width: 280px;
+    font-size: 18px;
+    font-family: 'K2D', sans-serif;
+    font-weight:300;
+  }
+
+  /* The popup form - hidden by default */
+  .form-popup {
+    display: none;
+    position: center;
+    bottom: 0;
+    padding: none;
+    right: 15px;
+    border: 3px solid #f1f1f1;
+    z-index: 9;
+    font-size: 18px;
+    font-family: 'K2D', sans-serif;
+    font-weight:300;
+    max-width: 250px;
+  }
+
+  /* Add styles to the form container */
+  .form-container {
+    max-width: 300px;
+    padding: 10px;
+    background-color: white;
+  }
+
+  /* Full-width input fields */
+  .form-container input[type=text], .form-container input[type=password] {
+    width: 100%;
+    padding: 15px;
+    margin: 5px 0 22px 0;
+    border: none;
+    background: #f1f1f1;
+  }
+
+  /* When the inputs get focus, do something */
+  .form-container input[type=text]:focus, .form-container input[type=password]:focus {
+    background-color: #ddd;
+    outline: none;
+  }
+
+  /* Set a style for the submit/login button */
+  .form-container .btn {
+    background-color: #c9720e;
+    color: white;
+    padding: 16px 20px;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    margin-bottom:10px;
+    opacity: 0.8;
+  }
+
+  /* Add a red background color to the cancel button */
+  .form-container .cancel {
+    background-color: rgb(58, 55, 55);
+  }
+
+  /* Add some hover effects to buttons */
+  .form-container .btn:hover, .open-button:hover {
+    opacity: 1;
   }
 </style>
 </body>
