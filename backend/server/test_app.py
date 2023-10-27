@@ -8,7 +8,7 @@ app_url = "http://127.0.0.1:5000/calculate_passes"
 
 # Sample JSON data for the POST request
 data = {
-    "catalog_number": "99999",  # Replace with a valid catalog number
+    "catalog_number": "02872",  # Replace with a valid catalog number
     "days" : "3"
 }
 

@@ -1,9 +1,12 @@
 <html>
-    <div class="topnav">
-        <img src="../images/23_Compact_OneColorReversed@4x.png"/>
-        <a class="active" href="./index.html">Home</a>
-        <a href="./datadisplay.html">Data</a>
-    </div>
+    <ul>
+        <li><img src="../images/23_Compact_OneColorReversed@4x.png"/></li>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="datadisplay.html">Data</a></li>
+        <li class="dropdown">
+          <button class="dropbtn" onclick="openForm()">Add Satellite</button>
+        </li>
+      </ul>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=K2D:wght@100;200&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Alumni+Sans:wght@300&family=K2D:wght@100;200&display=swap');
@@ -22,53 +25,113 @@
     font-size: 0.7vw;
     min-height: 350px;
     overflow: hidden;
-}
-#satellite-passes {
+  }
+  ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #333;
+    z-index: 5;
+  }
+  li {
+    float: left;
+  }
+
+  li a,  .dropbtn{
+    display: inline-block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+  }
+
+  li a:hover, .dropdown:hover .dropbtn {
+    background-color: #c9720e;
+  }
+
+  li.dropdown {
+    display: inline-block;
+  }
+
+  .dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #c9720e;
+    min-width: 160px;
+    z-index: 3;
+  }
+
+  .dropdown-content a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    text-align: left;
+    z-index: 3;
+  }
+
+  .dropdown-content a:hover {
+    background-color: #f1f1f1;
+    z-index: 3;
+  }
+
+  .a {
+    z-index: 3;
+  }
+
+  .dropdown:hover .dropdown-content {
+    display: block;
+    z-index: 3;
+  }
+
+  .dropbtn {
+    background-color: #333;
+    border: none;
+    border-radius: 0px;
+    border-color: #333;
+  }
+
+  .dropbtn::after {
+    color: #c9720e;
+    padding-left: 5px;
+
+  }
+  #satellite-passes {
     min-height: 350px;
     position: absolute;
     overflow: hidden;
     top: 440px; 
-    /* padding-top: 70%; */
-    /* right: 3%; Adjust the left position as needed */
     right: 1%;
     left: 89%;
     padding: 10px;
     background-color: none;
-    /* border-radius: 5px; */
     box-shadow: none;
     font-family: 'K2D', sans-serif;
-    /* font-size: 18px; */
     font-size:0.7vw;
-}
-#title{
+  }
+  #title{
     padding-top: 0.5%;
     padding-bottom: 1%;
     text-align: center;
     font-family: 'Alumni Sans', sans-serif;
-    /* font-size: 32px; */
     font-size:1vw;
     font-weight:300;
-}
-#bgnd{
+  }
+  #bgnd{
     color: black;
-}
-img {
+  }
+  img {
     width: 100%;
     max-width: 150px;
     height: auto;
     padding-top: 0.1%;
-    /* position: absolute; */
-    /* width: 150px; */
-    /* height: 55px; */
-    /* height : 5%;
-    top: 0.3%;
-    left: 0.1%; */
-}
-.topnav {
+  }
+  .topnav {
     overflow: hidden;
     background-color: #333;
-}
-.topnav a {
+  }
+  .topnav a {
     float: right;
     color: #f2f2f2;
     text-align: center;
@@ -77,14 +140,99 @@ img {
     font-size: 18px;
     font-family: 'K2D', sans-serif;
     font-weight:300;
-}
-.topnav a:hover {
+  }
+  .topnav a:hover {
     background-color: #ddd;
     color: black;
-}
-.topnav a.active {
+  }
+  .topnav a.active {
     background-color: #c9720e;
     color: white;
-}
+  }
+  .configure {
+    background-color: #333;
+    color: white;
+    padding-top: 18px;
+    text-decoration: none;
+    font-size: 18px;
+    font-family: 'K2D', sans-serif;
+    font-weight:300;
+    border: none;
+  }
+
+  .open-button {
+    background-color: #555;
+    color: white;
+    padding: 16px 20px;
+    border: none;
+    cursor: pointer;
+    opacity: 0.8;
+    position: fixed;
+    bottom: 23px;
+    right: 28px;
+    width: 280px;
+    font-size: 18px;
+    font-family: 'K2D', sans-serif;
+    font-weight:300;
+  }
+
+  /* The popup form - hidden by default */
+  .form-popup {
+    display: none;
+    position: center;
+    bottom: 0;
+    padding: none;
+    right: 15px;
+    border: 3px solid #f1f1f1;
+    z-index: 9;
+    font-size: 18px;
+    font-family: 'K2D', sans-serif;
+    font-weight:300;
+    max-width: 250px;
+  }
+
+  /* Add styles to the form container */
+  .form-container {
+    max-width: 300px;
+    padding: 10px;
+    background-color: white;
+  }
+
+  /* Full-width input fields */
+  .form-container input[type=text], .form-container input[type=password] {
+    width: 100%;
+    padding: 15px;
+    margin: 5px 0 22px 0;
+    border: none;
+    background: #f1f1f1;
+  }
+
+  /* When the inputs get focus, do something */
+  .form-container input[type=text]:focus, .form-container input[type=password]:focus {
+    background-color: #ddd;
+    outline: none;
+  }
+
+  /* Set a style for the submit/login button */
+  .form-container .btn {
+    background-color: #c9720e;
+    color: white;
+    padding: 16px 20px;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    margin-bottom:10px;
+    opacity: 0.8;
+  }
+
+  /* Add a red background color to the cancel button */
+  .form-container .cancel {
+    background-color: rgb(58, 55, 55);
+  }
+
+  /* Add some hover effects to buttons */
+  .form-container .btn:hover, .open-button:hover {
+    opacity: 1;
+  }
 </style>
 </html> 
