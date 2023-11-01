@@ -814,8 +814,8 @@
 from flask import Flask, request, jsonify
 from flask_apscheduler import APScheduler
 from flask_cors import CORS
-from skyfield.api import load, wgs84
-from datetime import timedelta
+from skyfield.api import load, wgs84, EarthSatellite
+from datetime import timezone, timedelta, datetime
 from more_itertools import chunked
 import numpy as np
 import ephem
@@ -839,6 +839,9 @@ observer_longitude = -106.4351
 
 bluffton = wgs84.latlon(+31.7677, -106.4351)
 
+
+time_series = {}
+
 # Fetch TLEs and store them in a dictionary
 ts = load.timescale()
 satellites = load.tle_file('https://www.celestrak.com/NORAD/elements/active.txt')
@@ -851,6 +854,28 @@ def update_tles():
     satellite_dict =  {sat.model.satnum: sat for sat in updated_satellites}
     print('Updated TLEs')
 
+def orbit_propagation(catalog_number):
+    tle = get_tle_by_catalog(catalog_number)
+    print(tle[0][0])
+    my_sat = EarthSatellite(tle[0][0], tle[0][1])
+    tz = timezone(timedelta(hours=0))  # whatever your timezone offset from UTC is
+    start = datetime.now(tz=tz)  # timezone-aware start time
+    end = start + timedelta(hours=12)  # one day's worth of times
+    delta = timedelta(seconds=10)  # your interval over which you evaluate
+    difference = my_sat - bluffton
+    now = start
+    while now <= end:
+        astrometrics = my_sat.at(ts.utc(now))
+        topocentric = difference.at(ts.utc(now))
+        el, az, distance = topocentric.altaz()
+        lat, lon = wgs84.latlon_of(astrometrics)
+        velocity = astrometrics.velocity.km_per_s
+        altitude = wgs84.height_of(astrometrics)
+        sunlit = astrometrics.is_sunlit(load("de421.bsp"))
+        time_series[now] = [{'el':el.degrees, 'az':az.degrees, 'lat': lat.degrees, 'lon': lon.degrees, 'alt': altitude.km, 'speed': np.linalg.norm(velocity), 'sunlit': sunlit}]
+        now += delta
+        # print(now)
+    
 def get_tle_by_catalog(catalog_number):
     tle = []
     with open('active.txt', 'r') as file:
@@ -902,6 +927,18 @@ def get_satellite_velocity(satellite):
 
 def is_satellite_sunlit(satellite):
     return satellite.at(ts.now()).is_sunlit(load("de421.bsp"))
+
+def get_positions():
+    for element in time_series:
+        cur_day = datetime.now(tz=timezone(timedelta(hours=0))).day
+        curr_hour = datetime.now(tz=timezone(timedelta(hours=0))).hour
+        curr_min = datetime.now(tz=timezone(timedelta(hours=0))).min
+        curr_sec = datetime.now(tz=timezone(timedelta(hours=0))).second
+        if element.day == cur_day and element.hour == curr_hour and element.min == curr_min:
+            for i in range (curr_sec - 5, curr_sec+5):
+                if element.second == i:
+                    return(time_series[element][0])
+        
 
 def get_satellite_positions(catalog_number):
     t = ts.now()
@@ -1047,7 +1084,11 @@ def get_position_chunk():
 def create_app():
     return app
 
+orbit_propagation('25544')
+get_positions()
+
 if __name__ == '__main__':
     scheduler.add_job(id = 'TLE Update', func = update_tles, trigger="interval", hours = 23)
+    # scheduler.add_job(id = 'Propagate Orbit', func = orbit_propagation, trigger="interval", hours = 23)
     scheduler.start()
     app.run(debug=True) 

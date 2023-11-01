@@ -235,6 +235,6 @@ def create_app():
     return app
 
 if __name__ == '__main__':
-    scheduler.add_job(id = 'TLE Update', func = update_tles, trigger="interval", hours = 23)
+    scheduler.add_job(id = 'TLE Update', func = update_tles, trigger="interval", hours = 12)
     scheduler.start()
     app.run(debug=True) 
