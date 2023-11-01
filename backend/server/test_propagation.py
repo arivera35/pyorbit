@@ -149,18 +149,101 @@
 
 
 ###################################################33
+# import numpy as np
+# from skyfield.api import load, EarthSatellite, Topos, wgs84
+# from datetime import datetime, timedelta
+# import pytz
+# from sgp4.io import fix_checksum
+
+# bluffton = wgs84.latlon(+31.7677, -106.4351)
+# ts = load.timescale()
+# tz = pytz.timezone('UTC')  # Use UTC timezone
+# bsp = load("de421.bsp")
+
+# def orbit_propagation(catalog_numbers):
+#     # Precompute values outside the loop
+#     start = datetime.now(tz=tz)
+#     end = start + timedelta(hours=0.5)
+#     delta = timedelta(seconds=60)
+
+#     time_series = {}  # Modified to store position data
+#     now = start
+#     while now <= end:
+#         time_series[now] = {}
+#         for catalog_number in catalog_numbers:
+#             tle, satellite_name = get_tle_by_catalog(catalog_number)
+#             if tle:
+#                 my_sat = EarthSatellite(tle[0], tle[1])
+#                 difference = my_sat - bluffton
+#                 satellite_data = []
+
+#                 astrometrics = my_sat.at(ts.utc(now))
+#                 topocentric = difference.at(ts.utc(now))
+#                 el, az, distance = topocentric.altaz()
+#                 lat, lon = wgs84.latlon_of(astrometrics)
+#                 velocity = astrometrics.velocity.km_per_s
+#                 altitude = wgs84.height_of(astrometrics)
+#                 sunlit = astrometrics.is_sunlit(bsp)
+                
+#                 # Store position data in time_series
+#                 satellite_data.append({'el': el.degrees, 'az': az.degrees, 'lat': lat.degrees, 'lon': lon.degrees, 'alt': altitude.km, 'speed': np.linalg.norm(velocity), 'sunlit': sunlit})
+                
+#                 time_series[now][satellite_name] = satellite_data
+
+#         now += delta
+
+#     return time_series
+
+# def get_tle_by_catalog(catalog_number):
+#     tle = []
+#     with open('active.txt', 'r') as file:
+#         lines = file.readlines()
+
+#     for i, line in enumerate(lines):
+#         if catalog_number in line:
+#             tle.append((lines[i-1]))
+#             tle.append((line))
+#             tle.append((lines[i + 1]))
+#             satellite_name = fix_checksum(tle[0])
+#             tle_fixed = (fix_checksum(tle[1]), fix_checksum(tle[2]))
+#             return tle_fixed, satellite_name
+
+#     return None, None
+
+# # Example usage:
+# catalog_numbers = ["25544", "57316"]
+# result = orbit_propagation(catalog_numbers)
+
+# # Function to print the updated time_series
+# def print_time_series(time_series):
+#     for timestamp, satellite_data_dict in time_series.items():
+#         print(f"Timestamp: {timestamp}")
+#         for satellite_name, position_data in satellite_data_dict.items():
+#             print(f"Satellite Name: {satellite_name}")
+#             for data in position_data:
+#                 print("Position Data:")
+#                 for key, value in data.items():
+#                     print(f"  {key}: {value}")
+#             print()
+#         print()
+
+# print_time_series(result)
+
+################################################################################
 
 import numpy as np
 from skyfield.api import load, EarthSatellite, Topos, wgs84
 from datetime import datetime, timedelta
 import pytz
 from sgp4.io import fix_checksum
+from concurrent.futures import ThreadPoolExecutor
+# from flask import Flask, jsonify
+import json
 
 bluffton = wgs84.latlon(+31.7677, -106.4351)
 ts = load.timescale()
 tz = pytz.timezone('UTC')  # Use UTC timezone
 bsp = load("de421.bsp")
-
 
 def orbit_propagation(catalog_numbers):
     # Precompute values outside the loop
@@ -168,16 +251,17 @@ def orbit_propagation(catalog_numbers):
     end = start + timedelta(hours=12)
     delta = timedelta(seconds=60)
 
-    time_series = {}
-    for catalog_number in catalog_numbers:
-        tle, satellite_name = get_tle_by_catalog(catalog_number)
-        if tle:
-            my_sat = EarthSatellite(tle[0], tle[1])
-            now = start
-            difference = my_sat - bluffton
-            satellite_data = []
+    time_series = {}  # Modified to store only the catalog_number as the identifier
+    now = start
+    while now <= end:
+        time_series[now] = {}
+        for catalog_number in catalog_numbers:
+            tle, satellite_name = get_tle_by_catalog(catalog_number)
+            if tle:
+                my_sat = EarthSatellite(tle[0], tle[1])
+                difference = my_sat - bluffton
+                satellite_data = []
 
-            while now <= end:
                 astrometrics = my_sat.at(ts.utc(now))
                 topocentric = difference.at(ts.utc(now))
                 el, az, distance = topocentric.altaz()
@@ -185,12 +269,17 @@ def orbit_propagation(catalog_numbers):
                 velocity = astrometrics.velocity.km_per_s
                 altitude = wgs84.height_of(astrometrics)
                 sunlit = astrometrics.is_sunlit(bsp)
-                satellite_data.append({'el': el.degrees, 'az': az.degrees, 'lat': lat.degrees, 'lon': lon.degrees, 'alt': altitude.km, 'speed': np.linalg.norm(velocity), 'sunlit': sunlit})
-                now += delta
+                
+                # Store satellite_name as a field in the position data
+                satellite_data.append({'el': el.degrees, 'az': az.degrees, 'lat': lat.degrees, 'lon': lon.degrees, 'alt': altitude.km, 'speed': np.linalg.norm(velocity), 'sunlit': sunlit, 'satellite_name': satellite_name})
+                
+                time_series[now][catalog_number] = satellite_data  # Use catalog_number as the identifier
 
-            time_series[satellite_name] = satellite_data
+        now += delta
 
     return time_series
+
+# Rest of your code remains the same
 
 def get_tle_by_catalog(catalog_number):
     tle = []
@@ -202,13 +291,26 @@ def get_tle_by_catalog(catalog_number):
             tle.append((lines[i-1]))
             tle.append((line))
             tle.append((lines[i + 1]))
-            satellite_name = fix_checksum(tle[0])
             tle_fixed = (fix_checksum(tle[1]), fix_checksum(tle[2]))
-            return tle_fixed, satellite_name
+            return tle_fixed, fix_checksum(tle[0])  # Return satellite_name as well
 
     return None, None
 
 # Example usage:
-catalog_numbers = ["25544", "57316"]
+catalog_numbers = ["25544"]
 result = orbit_propagation(catalog_numbers)
-print(result)
+
+def jsonify_time_series(time_series):
+    json_time_series = {}
+    for timestamp, satellite_data_dict in time_series.items():
+        json_time_series[str(timestamp)] = {}
+        for catalog_number, position_data in satellite_data_dict.items():
+            json_time_series[str(timestamp)][catalog_number] = position_data
+
+    return json_time_series
+
+json_result = jsonify_time_series(result)
+
+# Serialize the JSON to a string
+json_str = json.dumps(json_result, indent=4)
+print(json_str)
