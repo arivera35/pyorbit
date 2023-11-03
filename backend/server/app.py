@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify
 from flask_apscheduler import APScheduler
 from flask_cors import CORS
-from skyfield.api import load, wgs84
-from datetime import timedelta
+from skyfield.api import load, wgs84, EarthSatellite
+from datetime import timezone, timedelta, datetime
 from more_itertools import chunked
 import numpy as np
 import ephem
@@ -10,6 +10,7 @@ import time
 import datetime as dt
 from sgp4.io import fix_checksum
 import os
+import pytz
 
 app = Flask(__name__)
 CORS(app)
@@ -25,6 +26,9 @@ observer_latitude = 31.7677
 observer_longitude = -106.4351
 
 bluffton = wgs84.latlon(+31.7677, -106.4351)
+ts = load.timescale()
+tz = pytz.timezone('UTC')  # Use UTC timezone
+bsp = load("de421.bsp")
 
 # Fetch TLEs and store them in a dictionary
 ts = load.timescale()
@@ -63,23 +67,6 @@ def passes(station, satellite, start=None, duration=7):
         station.date = t_los + ephem.second
     return result
 
-def parse_tle_file():
-    tle_data = {}
-    current_catalog_number = None
-    current_tle_lines = []
-
-    with open('active.txt', 'r') as file:
-        for line in file:
-            line = line.strip()
-            if line.startswith('1 '):
-                current_tle_lines.append(line)
-            elif line.startswith('2 '):
-                current_tle_lines.append(line)
-                tle_data[current_catalog_number] = current_tle_lines
-                current_catalog_number = None
-                current_tle_lines = []
-    return tle_data
-
 def get_satellite_velocity(satellite):
     t = ts.now()
     geocentric = satellite.at(t)
@@ -88,72 +75,7 @@ def get_satellite_velocity(satellite):
     return speed
 
 def is_satellite_sunlit(satellite):
-    return satellite.at(ts.now()).is_sunlit(load("de421.bsp"))
-
-def get_satellite_positions(catalog_number):
-    t = ts.now()
-    num_positions = 10
-    satellite = satellite_dict[catalog_number]
-    difference = satellite - bluffton
-    topocentric = difference.at(t)
-
-    coordinates = []
-    for _ in range(num_positions):
-        t = ts.now()
-        geocentric = satellite.at(t)
-        lat, lon = wgs84.latlon_of(geocentric)
-        coordinates.append((lat.degrees, lon.degrees))  # Append as a tuple
-        # Increment the time for the next position
-        time.sleep(.2)
-        #t = t + timedelta(seconds = 3)  # Increment by 1 minute (adjust as needed)
-    return coordinates
-
-def calculate_pass_predictions(catalog_number, observer_location, start_time, end_time, min_elevation_deg):
-    
-    satellite = satellite_dict.get(catalog_number)
-    passes = []
-    if not satellite:
-        return []
-
-    observer = wgs84.latlon(observer_location[0], observer_location[1])
-    t, events = satellite.find_events(observer, start_time, end_time, altitude_degrees=min_elevation_deg)
-    
-    offset = len(events) % 3
-    t = t[offset:]
-    events = events[offset:]
-
-    for pass_times, pass_events in zip(chunked(t, 3), chunked(events, 3)):
-        full_pass = serialize_pass(satellite, pass_times, pass_events, observer)
-        start_time_dt = pass_times[0].utc_datetime()
-        end_time_dt = pass_times[-1].utc_datetime()
-        pass_duration_seconds = (end_time_dt - start_time_dt).total_seconds()
-        pass_duration_minutes = pass_duration_seconds / 60  # Convert seconds to minutes
-        full_pass["pass_duration_minutes"] = pass_duration_minutes
-        passes.append(full_pass)
-
-    return passes
-
-def serialize_pass(satellite, pass_times, pass_events, observer):
-    full_pass = {}
-    difference = satellite - bluffton
-    topocentric = difference.at(ts.now())
-
-    for time, event_type in zip(pass_times, pass_events):
-        geometric_sat = (satellite - observer).at(time)
-
-        sat_alt, sat_az, sat_d = geometric_sat.altaz()
-        is_sunlit = geometric_sat.is_sunlit(load("de421.bsp"))
-        event = ('rise', 'culmination', 'set')[event_type]
-
-        full_pass[event] = {
-            "alt": f"{sat_alt.degrees:.2f}",
-            "az": f"{sat_az.degrees:.2f}",
-            "utc_datetime": str(time.utc_datetime()),
-            "utc_timestamp": int(time.utc_datetime().timestamp()),
-            "is_sunlit": bool(is_sunlit)
-        }
-
-    return full_pass
+    return satellite.at(ts.now()).is_sunlit(bsp)
 
 def serialize_pass_duration(pass_prediction):
     pass_duration = {
@@ -163,6 +85,48 @@ def serialize_pass_duration(pass_prediction):
     }
 
     return pass_duration
+
+def orbit_propagation(catalog_numbers):
+    start = datetime.now(tz=tz)
+    end = start + timedelta(hours=1)
+    delta = timedelta(seconds=60)
+    time_series = {}
+    now = start
+    while now <= end:
+        time_series[now] = {}
+        for catalog_number in catalog_numbers:
+            tle, satellite_name = get_tle_by_catalog(str(catalog_number))
+            if tle:
+                my_sat = EarthSatellite(tle[0], tle[1])
+                difference = my_sat - bluffton
+                satellite_data = []
+
+                astrometrics = my_sat.at(ts.utc(now))
+                topocentric = difference.at(ts.utc(now))
+                el, az, distance = topocentric.altaz()
+                lat, lon = wgs84.latlon_of(astrometrics)
+                velocity = astrometrics.velocity.km_per_s
+                altitude = wgs84.height_of(astrometrics)
+                sunlit = astrometrics.is_sunlit(bsp)
+                
+                # Store satellite_name as a field in the position data
+                satellite_data.append({'el': el.degrees, 'az': az.degrees, 'lat': lat.degrees, 'lon': lon.degrees, 'alt': altitude.km, 'speed': np.linalg.norm(velocity), 'sunlit': str(sunlit), 'satellite_name': satellite_name})
+                
+                time_series[now][catalog_number] = satellite_data  # Use catalog_number as the identifier
+
+        now += delta
+
+    return time_series
+
+def get_nearest_position(time_series, current_time):
+    timestamps = list(time_series.keys())
+    nearest_positions = {}
+    for timestamp in timestamps:
+        if current_time <= timestamp :
+            break  # Stop searching if we've passed the current time
+        nearest_positions = time_series[timestamp]
+
+    return nearest_positions
 
 @app.route('/get_satellite_position', methods=['POST'])
 def get_satellite_position_route():
@@ -175,13 +139,11 @@ def get_satellite_position_route():
     topocentric = difference.at(t)
     el, az, distance= topocentric.altaz()
 
-    if el.degrees > 0:
-        print('The ISS is above the horizon')
-   
     if satellite is None:
         return jsonify({
             'error': 'Satellite not found'
         })
+    
     geocentric = satellite.at(t)
     lat, lon = wgs84.latlon_of(geocentric)
     height = wgs84.height_of(geocentric)
@@ -198,20 +160,8 @@ def get_satellite_position_route():
         'catalog_number': cat_num
     })
 
-@app.route('/get_pass_predictions', methods=['POST'])
-def get_pass_predictions_route():
-    data = request.json
-    catalog_number = int(data['catalog_number'])
-    min_elevation_deg = float(data['min_elevation'])
-    days = data['days']
-    start_time = ts.now()
-    end_time = start_time + timedelta(days=days)
-    observer_location = (observer_latitude, observer_longitude)
-    pass_predictions = calculate_pass_predictions(catalog_number, observer_location, start_time, end_time, min_elevation_deg)
-    return jsonify(pass_predictions)
-
-@app.route('/calculate_passes', methods=['POST'])
-def calculate_passes_route():
+@app.route('/get_access_windows', methods=['POST'])
+def get_access_windows():
     data = request.json
     catalog_number = str(data['catalog_number'])
     days = data['days']
@@ -222,14 +172,51 @@ def calculate_passes_route():
         all_passes.append(serialize_pass_duration(i))
     return all_passes
 
-@app.route('/get_position_chunk', methods=['POST'])
-def get_position_chunk():
+@app.route('/get_satellite_orbit',  methods=['POST'])
+def get_orbit():
     data = request.json
-    catalog_number = int(data['catalog_number'])
-    coordinates = get_satellite_positions(catalog_number)
-    return jsonify({
-        'coordinates': coordinates
-    })
+    catalog_numbers = []
+    i = 0
+    for catalog_number in data['catalog_numbers']:
+        catalog_numbers.append(str(data['catalog_numbers'][i]))
+        i = i + 1
+    result = orbit_propagation(catalog_numbers)
+    json_result = {str(timestamp): {catalog_number: position_data for catalog_number, position_data in satellite_data_dict.items()} for timestamp, satellite_data_dict in result.items()}
+    return jsonify(json_result)
+
+@app.route('/get_current_position_from_timeseries', methods=['POST'])
+def get_current_position_from_timeseries():
+    data = request.json
+    catalog_numbers = []
+    i = 0
+    for catalog_number in data['catalog_numbers']:
+        catalog_numbers.append(str(data['catalog_numbers'][i]))
+        i = i + 1
+    result = orbit_propagation(catalog_numbers)
+    current_time = datetime.now(tz=timezone(timedelta(hours=0)))
+    estimated_positions = get_nearest_position(result, current_time)
+    
+    return jsonify(estimated_positions)
+
+@app.route('/get_position_from_timeseries', methods=['POST'])
+def get_positions_at_specific_time():
+    data = request.json
+    specific_time_str = data['specific_time']
+    specific_time = datetime.fromisoformat(specific_time_str)
+    catalog_numbers = []
+    i = 0
+    for catalog_number in data['catalog_numbers']:
+        catalog_numbers.append(str(data['catalog_numbers'][i]))
+        i = i + 1
+    result = orbit_propagation(catalog_numbers)
+    estimated_positions = get_nearest_position(result, specific_time)
+    return jsonify(estimated_positions)
+    # if specific_time in result:
+    #     positions_at_specific_time = result[specific_time]
+    #     return jsonify(positions_at_specific_time)
+    # else:
+        # return jsonify({"error": "Positions not available for the specified time."})
+
 
 def create_app():
     return app

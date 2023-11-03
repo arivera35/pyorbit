@@ -1145,69 +1145,6 @@ def update_tles():
     print('Updated TLEs')
 
 
-def orbit_propagation(catalog_numbers):
-    # Precompute values outside the loop
-    start = datetime.now(tz=tz)
-    end = start + timedelta(hours=12)
-    delta = timedelta(seconds=10)
-
-    time_series = {}  # Modified to store only the catalog_number as the identifier
-
-    def propagate_orbit(catalog_number):
-        # Check if the result is in the cache
-        cached_result = cache.get(catalog_number)
-        if cached_result:
-            return cached_result
-
-        my_sat = None
-        tle = None
-        satellite_name = None
-
-        try:
-            tle, satellite_name = get_tle_by_catalog(catalog_number)
-            if tle:
-                my_sat = EarthSatellite(tle[0], tle[1])
-        except Exception as e:
-            # Handle exceptions for invalid TLE data or other issues
-            print(f"Error for catalog_number {catalog_number}: {e}")
-
-        if my_sat:
-            now = start
-            difference = my_sat - bluffton
-            satellite_data = []
-
-            while now <= end:
-                astrometrics = my_sat.at(ts.utc(now))
-                topocentric = difference.at(ts.utc(now))
-                el, az, distance = topocentric.altaz()
-                lat, lon = wgs84.latlon_of(astrometrics)
-                velocity = astrometrics.velocity.km_per_s
-                altitude = wgs84.height_of(astrometrics)
-                sunlit = astrometrics.is_sunlit(bsp)
-
-                # Store satellite_name as a field in the position data
-                satellite_data.append({'el': el.degrees, 'az': az.degrees, 'lat': lat.degrees, 'lon': lon.degrees, 'alt': altitude.km, 'speed': np.linalg.norm(velocity), 'sunlit': str(sunlit), 'satellite_name': satellite_name})
-
-                now += delta
-
-            # Cache the result for future use
-            cache[catalog_number] = (now, satellite_data)
-
-        return now, satellite_data
-
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        futures = [executor.submit(propagate_orbit, catalog_number) for catalog_number in catalog_numbers]
-
-        for future in futures:
-            now, satellite_data = future.result()
-            if now not in time_series:
-                time_series[now] = {}
-            for data in satellite_data:  # Iterate over the dictionaries in satellite_data
-                catalog_number = data['satellite_name']
-                time_series[now][catalog_number] = data
-
-    return time_series
-
 # def orbit_propagation(catalog_numbers):
 #     # Precompute values outside the loop
 #     start = datetime.now(tz=tz)
@@ -1215,16 +1152,31 @@ def orbit_propagation(catalog_numbers):
 #     delta = timedelta(seconds=10)
 
 #     time_series = {}  # Modified to store only the catalog_number as the identifier
-#     now = start
-#     while now <= end:
-#         time_series[now] = {}
-#         for catalog_number in catalog_numbers:
+
+#     def propagate_orbit(catalog_number):
+#         # Check if the result is in the cache
+#         cached_result = cache.get(catalog_number)
+#         if cached_result:
+#             return cached_result
+
+#         my_sat = None
+#         tle = None
+#         satellite_name = None
+
+#         try:
 #             tle, satellite_name = get_tle_by_catalog(catalog_number)
 #             if tle:
 #                 my_sat = EarthSatellite(tle[0], tle[1])
-#                 difference = my_sat - bluffton
-#                 satellite_data = []
+#         except Exception as e:
+#             # Handle exceptions for invalid TLE data or other issues
+#             print(f"Error for catalog_number {catalog_number}: {e}")
 
+#         if my_sat:
+#             now = start
+#             difference = my_sat - bluffton
+#             satellite_data = []
+
+#             while now <= end:
 #                 astrometrics = my_sat.at(ts.utc(now))
 #                 topocentric = difference.at(ts.utc(now))
 #                 el, az, distance = topocentric.altaz()
@@ -1232,15 +1184,62 @@ def orbit_propagation(catalog_numbers):
 #                 velocity = astrometrics.velocity.km_per_s
 #                 altitude = wgs84.height_of(astrometrics)
 #                 sunlit = astrometrics.is_sunlit(bsp)
-                
+
 #                 # Store satellite_name as a field in the position data
 #                 satellite_data.append({'el': el.degrees, 'az': az.degrees, 'lat': lat.degrees, 'lon': lon.degrees, 'alt': altitude.km, 'speed': np.linalg.norm(velocity), 'sunlit': str(sunlit), 'satellite_name': satellite_name})
-                
-#                 time_series[now][catalog_number] = satellite_data  # Use catalog_number as the identifier
 
-#         now += delta
+#                 now += delta
+
+#             # Cache the result for future use
+#             cache[catalog_number] = (now, satellite_data)
+
+#         return now, satellite_data
+
+#     with ThreadPoolExecutor(max_workers=5) as executor:
+#         futures = [executor.submit(propagate_orbit, catalog_number) for catalog_number in catalog_numbers]
+
+#         for future in futures:
+#             now, satellite_data = future.result()
+#             if now not in time_series:
+#                 time_series[now] = {}
+#             for data in satellite_data:  # Iterate over the dictionaries in satellite_data
+#                 catalog_number = data['satellite_name']
+#                 time_series[now][catalog_number] = data
 
 #     return time_series
+
+def orbit_propagation(catalog_numbers):
+    # Precompute values outside the loop
+    start = datetime.now(tz=tz)
+    end = start + timedelta(hours=1)
+    delta = timedelta(seconds=60)
+    time_series = {}  # Modified to store only the catalog_number as the identifier
+    now = start
+    while now <= end:
+        time_series[now] = {}
+        for catalog_number in catalog_numbers:
+            tle, satellite_name = get_tle_by_catalog(str(catalog_number))
+            if tle:
+                my_sat = EarthSatellite(tle[0], tle[1])
+                difference = my_sat - bluffton
+                satellite_data = []
+
+                astrometrics = my_sat.at(ts.utc(now))
+                topocentric = difference.at(ts.utc(now))
+                el, az, distance = topocentric.altaz()
+                lat, lon = wgs84.latlon_of(astrometrics)
+                velocity = astrometrics.velocity.km_per_s
+                altitude = wgs84.height_of(astrometrics)
+                sunlit = astrometrics.is_sunlit(bsp)
+                
+                # Store satellite_name as a field in the position data
+                satellite_data.append({'el': el.degrees, 'az': az.degrees, 'lat': lat.degrees, 'lon': lon.degrees, 'alt': altitude.km, 'speed': np.linalg.norm(velocity), 'sunlit': str(sunlit), 'satellite_name': satellite_name})
+                
+                time_series[now][catalog_number] = satellite_data  # Use catalog_number as the identifier
+
+        now += delta
+
+    return time_series
     
 def get_tle_by_catalog(catalog_number):
     tle = []
@@ -1360,10 +1359,17 @@ def calculate_passes_route():
         all_passes.append(serialize_pass_duration(i))
     return all_passes
 
-@app.route('/get_satellite_orbit', methods=['POST'])
+@app.route('/get_satellite_orbit',  methods=['POST'])
 def get_orbit():
     data = request.json
-    catalog_numbers = str(data['catalog_number'])
+    print(data['catalog_numbers'])
+    catalog_numbers = []
+    i = 0
+    for catalog_number in data['catalog_numbers']:
+        # print(type(catalog_number))
+        catalog_numbers.append(str(data['catalog_numbers'][i]))
+        i = i + 1
+    # catalog_numbers = ["25544"]
     result = orbit_propagation(catalog_numbers)
     json_result = {str(timestamp): {catalog_number: position_data for catalog_number, position_data in satellite_data_dict.items()} for timestamp, satellite_data_dict in result.items()}
     return jsonify(json_result)
@@ -1381,7 +1387,7 @@ def get_satellite_position():
 
 @app.route('/orbit_data')
 def get_orbit_data():
-    catalog_numbers = ["25544", "57316"]
+    catalog_numbers = ["25544"]
     result = orbit_propagation(catalog_numbers)
     json_result = {str(timestamp): {catalog_number: position_data for catalog_number, position_data in satellite_data_dict.items()} for timestamp, satellite_data_dict in result.items()}
     current_time = datetime.now(tz=timezone(timedelta(hours=0)))
@@ -1396,6 +1402,8 @@ def get_orbit_data():
 
 def create_app():
     return app
+
+print(get_tle_by_catalog("25544"))
 
 if __name__ == '__main__':
     scheduler.add_job(id = 'TLE Update', func = update_tles, trigger="interval", hours = 23)
