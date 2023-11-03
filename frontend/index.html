@@ -40,7 +40,7 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
       <p>----------------------------</p>
     </section>
   <ul>
-    <li><img src="../images/23_Compact_OneColorReversed@4x.png"/></li>
+    <li><img src="/23_Compact_OneColorReversed@4x.png"/></li>
     <li><a href="index.html">Home</a></li>
     <li><a href="datadisplay.html">Data</a></li>
     <li class="dropdown">
@@ -48,26 +48,86 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
     </li>
   </ul>
   <div class="form-popup" id="myForm">
-    <form action="/action_page.php" class="form-container">
+    <form class="form-container">
       <h1>Satellite</h1>
-  
       <label for="catalog_num"><b>NORAD Catalog Number</b></label>
-      <input type="text" placeholder="Catalog Number" name="catalog_num" required>
-  
-      <button type="submit" class="btn">Submit</button>
+      <input type="text" placeholder="Catalog Number" name="catalog_num" id="catalog_num" required>
+      <button type="submit" class="btn" onclick="submitForm()">Submit</button>
       <button type="button" class="btn cancel" onclick="closeForm()">Close</button>
     </form>
   </div>
   <div id="map"></div>
 </div>
 <script>
-	  mapboxgl.accessToken = 'pk.eyJ1IjoiYXJpdmVyYTM1IiwiYSI6ImNrbHVrenM2MDF6aXgybmx3bDN2ZjFtMm0ifQ.PnjnSxGKp1YMV7aik9cFjA';
+	mapboxgl.accessToken = 'pk.eyJ1IjoiYXJpdmVyYTM1IiwiYSI6ImNrbHVrenM2MDF6aXgybmx3bDN2ZjFtMm0ifQ.PnjnSxGKp1YMV7aik9cFjA';
     function openForm() {
       document.getElementById("myForm").style.display = "block";
     }
     function closeForm() {
       document.getElementById("myForm").style.display = "none";
     }
+    function submitForm() {
+        const catalogNumber = document.getElementById('catalog_num').value;
+        console.log(catalogNumber);
+        updateSatellite(catalogNumber);
+        closeForm();
+    }
+    
+    function updateSatellite(newCatalogNumber) {
+        // Update the displayed Catalog Number
+        document.getElementById('catalog_number').textContent = newCatalogNumber;
+        console.log("in updateSatellite");
+        // Call the functions to get satellite position and calculate passes with the new Catalog Number
+        getSatellitePosition(newCatalogNumber);
+        calculatePasses(newCatalogNumber);
+    }
+
+    async function calculatePasses(catalogNumber) {
+        console.log("in calculatePasses");
+        try {
+            const response = await fetch('http://127.0.0.1:5000/get_access_windows', {
+            method: 'POST',
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Content-Type': 'multipart/form-data'
+                // 'Content-Type': 'application/json'
+                // 'Content-Type': 'text/plain'
+            },
+            body: JSON.stringify({
+                catalog_number: catalogNumber,
+                days: 3
+            })
+            });
+
+            // Rest of the function remains unchanged...
+        } catch (err) {
+            console.log("ERROR");
+            console.error('Error fetching pass predictions:', err);
+        }
+    }
+
+    async function getSatellitePosition(catalogNumber) {
+        console.log("in getSatellitePosition");
+        try {
+            const response = await fetch('http://127.0.0.1:5000/get_satellite_position', {
+            method: 'POST',
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                // 'Content-Type': 'application/json'
+                'Content-Type': 'multipart/form-data'
+                // 'Content-Type': 'text/plain'
+            },
+            body: JSON.stringify({
+                catalog_number: catalogNumber
+            })
+        });
+
+            // Rest of the function remains unchanged...
+        } catch (err) {
+            console.error('Error fetching satellite position:', err);
+        }
+    }
+
     const map = new mapboxgl.Map({
       container: 'map',
       // style: 'mapbox://styles/mapbox/satellite-streets-v12',
@@ -79,7 +139,7 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
     .setLngLat([-106.43502, 31.767600])
     .addTo(map);
 
-    map.on('style.load', () => {
+    map.once('style.load', () => {
       map.setFog({
         color: 'rgb(186, 210, 235)', // Lower atmosphere
         'high-color': 'rgb(36, 92, 223)', // Upper atmosphere
@@ -90,7 +150,7 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
     });
 
 
-    map.on('load', async () => {
+    map.once('load', async () => {
         // Get the initial location of the International Space Station (ISS).
         const geojson = await getLocation();
         getNextPasses();
@@ -122,6 +182,7 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
             const response = await fetch('http://127.0.0.1:5000/get_access_windows', {
               method: 'POST',
               headers: {
+                'Access-Control-Allow-Origin':'*',
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
@@ -168,6 +229,7 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
             const response = await fetch('http://127.0.0.1:5000/get_satellite_position', {
               method: 'POST',
               headers: {
+                'Access-Control-Allow-Origin':'*',
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
@@ -210,7 +272,120 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
             throw new Error(err);
           }
         }
+
+        map.addSource('route', {
+        'type': 'geojson',
+        'data': {
+        'type': 'Feature',
+        'properties': {},
+        'geometry': {
+        'type': 'LineString',
+        'coordinates': [
+        [-122.483696, 37.833818],
+        [-122.483482, 37.833174],
+        [-122.483396, 37.8327],
+        [-122.483568, 37.832056],
+        [-122.48404, 37.831141],
+        [-122.48404, 37.830497],
+        [-122.483482, 37.82992],
+        [-122.483568, 37.829548],
+        [-122.48507, 37.829446],
+        [-122.4861, 37.828802],
+        [-122.486958, 37.82931],
+        [-122.487001, 37.830802],
+        [-122.487516, 37.831683],
+        [-122.488031, 37.832158],
+        [-122.488889, 37.832971],
+        [-122.489876, 37.832632],
+        [-122.490434, 37.832937],
+        [-122.49125, 37.832429],
+        [-122.491636, 37.832564],
+        [-122.492237, 37.833378],
+        [-122.493782, 37.833683]
+        ]
+        }
+        }
+        });
+        map.addLayer({
+        'id': 'route',
+        'type': 'line',
+        'source': 'route',
+        'layout': {
+        'line-join': 'round',
+        'line-cap': 'round'
+        },
+        'paint': {
+        'line-color': 'white',
+        'line-width': 8
+        }
 });
+
+// Function to fetch coordinates from an API
+function fetchCoordinatesFromAPI() {
+    // Replace with your server URL where orbit_propagation is hosted
+    const serverURL = 'http://127.0.0.1:5000';
+
+    // Replace with the appropriate endpoint on your server
+    const endpoint = '/get_satellite_orbit';
+
+    // Replace with the catalog numbers you want to retrieve coordinates for
+    const catalogNumbers = ['25544'];
+
+    // Make a POST request to the server
+    fetch(serverURL + endpoint, {
+      method: 'POST',
+              headers: {
+                'Access-Control-Allow-Origin':'*',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                catalog_numbers: "25544"
+              })
+    })
+        .then(response => response.json())
+        .then(data => {
+            // Extract coordinates from the API response
+            const coordinates = data.coordinates; // Modify this based on your API response structure
+
+            // Create a GeoJSON feature with the retrieved coordinates
+            const geojson = {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                    type: 'LineString',
+                    coordinates: coordinates,
+                },
+            };
+
+            // Add the retrieved route to the map
+            map.addSource('route', {
+                type: 'geojson',
+                data: geojson,
+            });
+
+            map.addLayer({
+                id: 'route',
+                type: 'line',
+                source: 'route',
+                layout: {
+                    'line-join': 'round',
+                    'line-cap': 'round',
+                },
+                paint: {
+                    'line-color': '#888',
+                    'line-width': 8,
+                },
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching coordinates:', error);
+        });
+}
+
+// Call the function to fetch and display coordinates
+fetchCoordinatesFromAPI();
+
+    });
 </script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=K2D:wght@100;200&display=swap');
@@ -306,7 +481,7 @@ body { margin: 0; padding: 0; background-color: rgb(255, 255, 255); }
     min-height: 350px;
     position: absolute;
     overflow: hidden;
-    top: 600px; 
+    top: 440px; 
     right: 1%;
     left: 89%;
     padding: 10px;
